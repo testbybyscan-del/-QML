@@ -1,0 +1,25 @@
+# Сборка
+build/
+build-*/
+*.o
+*.so
+*.a
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.user
+*.user.*
+
+# IDE сохранение в git
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Прочее
+.DS_Store
+*.swp

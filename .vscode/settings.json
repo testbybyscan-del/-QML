@@ -1,8 +1,0 @@
-{
-    "cmake.buildDirectory": "${workspaceFolder}/build",
-    "cmake.generator": "Ninja",
-    "cmake.configureOnOpen": true,
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "qt-qml.qmllint.path": "path/to/qmllint",
-    "qt-qml.qmlformat.path": "path/to/qmlformat"
-}
