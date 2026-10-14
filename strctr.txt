@@ -1,0 +1,21 @@
+loderunner/
+├── CMakeLists.txt              # Главный файл сборки
+├── main.cpp                    # Точка входа (загружает QML)
+├── src/                        # C++ бэкенд (игровая логика)
+│   ├── gameengine.h
+│   ├── gameengine.cpp
+│   └── ...
+├── qml/                        # QML фронтенд (визуализация)
+│   ├── main.qml                # Корневой QML-файл
+│   ├── components/             # Переиспользуемые QML-компоненты
+│   │   ├── Player.qml
+│   │   ├── Enemy.qml
+│   │   └── Tile.qml
+│   └── ...
+├── assets/                     # Ресурсы (спрайты, звуки)
+│   ├── images/
+│   └── sounds/
+└── .vscode/                    # Настройки VS Code
+    ├── settings.json
+    ├── tasks.json
+    └── launch.json
