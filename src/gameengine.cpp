@@ -209,6 +209,22 @@ void GameEngine::updateCrystals()
                 continue;
             const QChar fallingGem = tileAt(row, col);
 
+            // A vertical chain falls as one unit when the cell under its bottom gem is free.
+            int chainTop = row;
+            while (chainTop > 1 && isGem(chainTop - 1, col))
+                --chainTop;
+            if (chainTop < row && isEmpty(row + 1, col)) {
+                for (int sourceRow = row; sourceRow >= chainTop; --sourceRow) {
+                    const int destinationRow = sourceRow + 1;
+                    const QChar shiftedGem = tileAt(sourceRow, col);
+                    setTileAt(destinationRow, col, shiftedGem);
+                    setTileAt(sourceRow, col, '.');
+                    m_tilesModel.updateTile(destinationRow, col, gemType(shiftedGem));
+                    m_tilesModel.updateTile(sourceRow, col, "empty");
+                }
+                return;
+            }
+
             if (tileAt(row + 1, col) == '.') {
                 if (!isEmpty(row + 1, col)
                         || !isEmpty(row, col - 1)
@@ -238,15 +254,14 @@ void GameEngine::updateCrystals()
             if (tumbleDirection == 0)
                 continue;
 
-            int chainTop = row;
-            while (chainTop > 1 && isGem(chainTop - 1, col))
-                --chainTop;
-
+            const QChar upperGem = tileAt(row, col);
             const QChar tumblingGem = tileAt(row + 1, col);
             setTileAt(row, col, '.');
             setTileAt(row + 1, col + tumbleDirection, tumblingGem);
+            setTileAt(row + 1, col, upperGem);
             m_tilesModel.updateTile(row, col, "empty");
             m_tilesModel.updateTile(row + 1, col + tumbleDirection, gemType(tumblingGem));
+            m_tilesModel.updateTile(row + 1, col, gemType(upperGem));
 
             for (int sourceRow = row - 1; sourceRow >= chainTop; --sourceRow) {
                 const int destinationRow = sourceRow + 1;
