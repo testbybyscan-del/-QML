@@ -4,11 +4,11 @@
 // Легенда уровня:
 //  '#' кирпич, 'H' лестница, '-' верёвка, '$' золото,
 //  'P' старт игрока, 'E' враг, '.' пусто
-static const QStringList kLevel = {
+static const QVector<QString> kLevel = {
     "####################",
     "#..................#",
     "#..$....H....$.....#",
-    "#HHHHHHHHHHHHHHHH..#",
+    "#HHHHHHHHHHHHHHHHHH#",
     "#..................#",
     "#....####....####..#",
     "#....#..H....#..H..#",
@@ -26,6 +26,12 @@ GameEngine::GameEngine(QObject *parent) : QObject(parent)
 
 void GameEngine::loadLevel()
 {
+    for (QTimer *timer : m_dugTileTimers) {
+        timer->stop();
+        timer->deleteLater();
+    }
+    m_dugTileTimers.clear();
+
     m_rows = kLevel.size();
     m_columns = kLevel.isEmpty() ? 0 : kLevel.first().size();
     m_grid = kLevel;
@@ -127,6 +133,21 @@ void GameEngine::dig()
     if (tileAt(by, bx) == '#') {
         setTileAt(by, bx, '.');
         m_tilesModel.updateTile(by, bx, "dug");
+
+        const int tileKey = by * m_columns + bx;
+        auto *timer = new QTimer(this);
+        timer->setSingleShot(true);
+        m_dugTileTimers.insert(tileKey, timer);
+        connect(timer, &QTimer::timeout, this, [this, by, bx, tileKey, timer]() {
+            m_dugTileTimers.remove(tileKey);
+            if (tileAt(by, bx) == '.') {
+                setTileAt(by, bx, '#');
+                m_tilesModel.updateTile(by, bx, "brick");
+            }
+            timer->deleteLater();
+        });
+        timer->start(15000);
+
         m_playerState = "dig";
         emit playerStateChanged();
     }

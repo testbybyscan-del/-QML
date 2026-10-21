@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="main.qml">qml/main.qml</file>
+        <file alias="components/Tile.qml">qml/components/Tile.qml</file>
+        <file alias="components/Player.qml">qml/components/Player.qml</file>
+        <file alias="components/Enemy.qml">qml/components/Enemy.qml</file>
+    </qresource>
+</RCC>

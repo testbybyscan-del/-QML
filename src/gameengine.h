@@ -3,6 +3,8 @@
 
 #include <QObject>
 #include <QAbstractListModel>
+#include <QHash>
+#include <QTimer>
 #include <QVector>
 #include <QQmlEngine>
 
@@ -158,6 +160,8 @@ private:
     bool m_levelComplete = false;
 
     QVector<QString> m_grid; // каждый QString — строка уровня
+
+    QHash<int, QTimer*> m_dugTileTimers;
 
     TileModel m_tilesModel;
     EnemyModel m_enemiesModel;

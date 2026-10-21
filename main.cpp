@@ -1,24 +1,22 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QtQml/qqmlextensionplugin.h>
-
-// Если у вас есть C++ классы, которые нужно использовать в QML
+#include <QtQml/qqml.h>
+#include <QUrl>
 #include "src/gameengine.h"
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
-
-    // Регистрируем C++ тип для использования в QML
     qmlRegisterType<GameEngine>("LodeRunner", 1, 0, "GameEngine");
-
     QQmlApplicationEngine engine;
-
-    // Загрузка QML из модуля (Qt 6.5+)
-    engine.loadFromModule("LodeRunner", "Main");
-
+    const QUrl url(QStringLiteral("qrc:/main.qml"));
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [url](QObject *obj, const QUrl &objUrl) {
+        if (!obj && url == objUrl)
+            QCoreApplication::exit(-1);
+    }, Qt::QueuedConnection);
+    engine.load(url);
     if (engine.rootObjects().isEmpty())
         return -1;
-
     return app.exec();
 }
