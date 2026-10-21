@@ -163,7 +163,9 @@ void GameEngine::dig()
     int bx = m_playerX + dx;
     int by = m_playerY + 1; // копаем вниз-вбок (классика Lode Runner)
 
-    if (tileAt(by, bx) == '#') {
+    const bool insidePerimeter = by > 0 && by < m_rows - 1
+            && bx > 0 && bx < m_columns - 1;
+    if (insidePerimeter && tileAt(by, bx) == '#') {
         // Dug cells become empty in the simulation grid, so crystals can fall or tumble into them.
         setTileAt(by, bx, '.');
         m_tilesModel.updateTile(by, bx, "dug");
