@@ -47,4 +47,28 @@ Item {
             }
         }
     }
+
+    Item {
+        anchors.fill: parent
+        visible: tile.type === "gold"
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: parent.width * 0.58
+            height: parent.height * 0.58
+            rotation: 45
+            color: "#f5c542"
+            border.color: "#fff0a3"
+            border.width: 2
+
+            Rectangle {
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.margins: 4
+                width: 5
+                height: 5
+                color: "#fff8d6"
+            }
+        }
+    }
 }

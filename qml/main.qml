@@ -83,7 +83,10 @@ Window {
 
                 Text {
                     width: parent.width / 2
-                    text: qsTr("Очки: %1     Жизни: %2").arg(gameEngine.score).arg(gameEngine.lives)
+                    text: qsTr("Призы: %1   Очки: %2   Жизни: %3")
+                          .arg(gameEngine.prizesLeft)
+                          .arg(gameEngine.score)
+                          .arg(gameEngine.lives)
                     color: "#d1d5db"
                     font.pixelSize: 18
                     horizontalAlignment: Text.AlignRight
@@ -120,7 +123,7 @@ Window {
 
             Text {
                 width: board.width
-                text: qsTr("Движение: стрелки или WASD     Копать: пробел     Выход: Esc")
+                text: qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать, Esc — выход")
                 color: "#cbd5e1"
                 font.pixelSize: 15
                 horizontalAlignment: Text.AlignHCenter

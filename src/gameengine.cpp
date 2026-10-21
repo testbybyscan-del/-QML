@@ -6,17 +6,17 @@
 //  'P' старт игрока, 'E' враг, '.' пусто
 static const QVector<QString> kLevel = {
     "####################",
+    "#..$....#C#.....$..#",
     "#.......#C#........#",
     "#.......#C#........#",
-    "#.......#C#........#",
-    "#.......#C#........#",
+    "#..$....#C#.....$..#",
     "#....####C####.....#",
     "#.......#C#........#",
     "#.......#C#........#",
     "#.......#C#........#",
     "#....####C####.....#",
     "#.......#C#........#",
-    "#..P...............#",
+    "#..P..$........$...#",
     "####################"
 };
 
@@ -36,6 +36,7 @@ void GameEngine::loadLevel()
     m_rows = kLevel.size();
     m_columns = kLevel.isEmpty() ? 0 : kLevel.first().size();
     m_grid = kLevel;
+    m_prizesLeft = 0;
 
     QVector<TileModel::Tile> tiles;
     QVector<EnemyModel::Enemy> enemies;
@@ -48,7 +49,10 @@ void GameEngine::loadLevel()
             case '#': type = "brick"; break;
             case 'H': type = "ladder"; break;
             case '-': type = "rope"; break;
-            case '$': type = "gold"; break;
+            case '$':
+                type = "gold";
+                ++m_prizesLeft;
+                break;
             case 'P':
                 m_playerX = c; m_playerY = r;
                 m_grid[r][c] = '.';
@@ -111,7 +115,12 @@ void GameEngine::movePlayer(int dx, int dy)
             setTileAt(ny, nx, '.');
             m_tilesModel.updateTile(ny, nx, "empty");
             m_score += 100;
+            --m_prizesLeft;
             emit scoreChanged();
+            if (m_prizesLeft == 0) {
+                m_levelComplete = true;
+                emit statusChanged();
+            }
         }
 
         if (dy < 0) m_playerState = "climb";
