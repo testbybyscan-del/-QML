@@ -36,8 +36,12 @@ static const QVector<QString> kLevel2 = {
     "####################"
 };
 
+// Уровни добавляются в этот список; логика сохранения и переходов использует их номер.
+static const QVector<QVector<QString>> kLevels = {kLevel1, kLevel2};
+
 GameEngine::GameEngine(QObject *parent) : QObject(parent)
 {
+    m_levelSnapshots.resize(kLevels.size());
     loadLevel();
 }
 
@@ -49,8 +53,8 @@ void GameEngine::loadLevel()
     }
     m_dugTileTimers.clear();
 
-    const QVector<QString> &level = m_currentLevel == 1 ? kLevel1 : kLevel2;
-    const LevelSnapshot &snapshot = m_currentLevel == 1 ? m_level1Snapshot : m_level2Snapshot;
+    const QVector<QString> &level = kLevels.at(m_currentLevel - 1);
+    const LevelSnapshot &snapshot = m_levelSnapshots.at(m_currentLevel - 1);
     const bool restoringSnapshot = snapshot.valid;
     m_rows = level.size();
     m_columns = level.isEmpty() ? 0 : level.first().size();
@@ -130,7 +134,7 @@ bool GameEngine::playerCanEnter(int row, int col) const
 
 void GameEngine::movePlayer(int dx, int dy)
 {
-    if (m_gameOver || m_levelComplete) return;
+    if (m_gameOver) return;
 
     if (dx != 0) m_playerFacingRight = (dx > 0);
 
@@ -171,11 +175,8 @@ void GameEngine::movePlayer(int dx, int dy)
             --m_prizesLeft;
             emit scoreChanged();
             if (m_prizesLeft == 0) {
-                if (m_currentLevel == 1) {
-                    saveCurrentLevel();
-                    m_currentLevel = 2;
-                    m_playerState = "idle";
-                    loadLevel();
+                if (m_currentLevel < kLevels.size()) {
+                    switchToLevel(m_currentLevel + 1);
                     return;
                 }
                 m_levelComplete = true;
@@ -190,18 +191,17 @@ void GameEngine::movePlayer(int dx, int dy)
         emit playerPositionChanged();
         emit playerStateChanged();
 
-        if (m_playerX == 1 && m_playerY == m_rows - 2) {
-            if (m_currentLevel == 2)
-                returnToFirstLevel();
-            else if (m_currentLevel == 1 && m_prizesLeft == 0 && m_level2Snapshot.valid)
-                returnToSecondLevel();
-        }
+        if (m_playerY == m_rows - 2 && m_playerX == 1 && m_currentLevel > 1)
+            switchToLevel(m_currentLevel - 1);
+        else if (m_playerY == m_rows - 2 && m_playerX == m_columns - 2
+                 && m_prizesLeft == 0 && m_currentLevel < kLevels.size())
+            switchToLevel(m_currentLevel + 1);
     }
 }
 
 void GameEngine::saveCurrentLevel()
 {
-    LevelSnapshot &snapshot = m_currentLevel == 1 ? m_level1Snapshot : m_level2Snapshot;
+    LevelSnapshot &snapshot = m_levelSnapshots[m_currentLevel - 1];
     snapshot.grid = m_grid;
     snapshot.playerX = m_playerX;
     snapshot.playerY = m_playerY;
@@ -210,24 +210,14 @@ void GameEngine::saveCurrentLevel()
     snapshot.valid = true;
 }
 
-void GameEngine::returnToFirstLevel()
+void GameEngine::switchToLevel(int targetLevel)
 {
-    if (m_currentLevel != 2 || m_gameOver)
+    if (targetLevel < 1 || targetLevel > kLevels.size()
+            || targetLevel == m_currentLevel || m_gameOver)
         return;
 
     saveCurrentLevel();
-    m_currentLevel = 1;
-    m_playerState = "idle";
-    loadLevel();
-}
-
-void GameEngine::returnToSecondLevel()
-{
-    if (m_currentLevel != 1 || m_prizesLeft != 0 || !m_level2Snapshot.valid || m_gameOver)
-        return;
-
-    saveCurrentLevel();
-    m_currentLevel = 2;
+    m_currentLevel = targetLevel;
     m_playerState = "idle";
     loadLevel();
 }

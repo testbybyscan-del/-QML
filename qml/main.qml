@@ -124,11 +124,13 @@ Window {
 
             Text {
                 width: board.width
-                text: gameEngine.currentLevel === 2
-                      ? qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать. Нижний левый угол — возврат на первый уровень, Esc — выход")
-                      : gameEngine.prizesLeft === 0
-                        ? qsTr("Призы собраны. Нижний левый угол — перейти на второй уровень, Esc — выход")
-                        : qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать, Esc — выход")
+                text: gameEngine.levelComplete
+                      ? qsTr("Все призы собраны. Нижний левый угол — предыдущий экран, Esc — выход")
+                      : gameEngine.currentLevel > 1
+                        ? qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать. Нижний левый угол — предыдущий экран, нижний правый — следующий после сбора всех призов")
+                        : gameEngine.prizesLeft === 0
+                          ? qsTr("Призы собраны. Нижний правый угол — следующий экран, Esc — выход")
+                          : qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать, Esc — выход")
                 color: "#cbd5e1"
                 font.pixelSize: 15
                 horizontalAlignment: Text.AlignHCenter
@@ -138,7 +140,7 @@ Window {
 
         Rectangle {
             anchors.fill: parent
-            visible: gameEngine.gameOver || gameEngine.levelComplete
+            visible: gameEngine.gameOver
             color: "#b3000000"
 
             Text {
@@ -146,7 +148,7 @@ Window {
                 color: "white"
                 font.pixelSize: 40
                 font.bold: true
-                text: gameEngine.levelComplete ? qsTr("Уровень пройден!") : qsTr("Игра окончена")
+                text: qsTr("Игра окончена")
             }
         }
 
