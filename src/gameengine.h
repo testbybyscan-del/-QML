@@ -149,6 +149,7 @@ signals:
 
 private:
     void loadLevel();
+    void returnToFirstLevel();
     QChar tileAt(int row, int col) const;
     void setTileAt(int row, int col, QChar ch);
     bool playerCanEnter(int row, int col) const;

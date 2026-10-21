@@ -6,7 +6,7 @@
 //  'P' старт игрока, 'E' враг, '.' пусто
 static const QVector<QString> kLevel1 = {
     "####################",
-    "#..$....#C#.....$..#",
+    "#..$....#$#.....$..#",
     "#.......#C#........#",
     "#.......#C#........#",
     "#..$....#C#.....$..#",
@@ -174,7 +174,21 @@ void GameEngine::movePlayer(int dx, int dy)
 
         emit playerPositionChanged();
         emit playerStateChanged();
+
+        if (m_currentLevel == 2 && m_playerX == 1 && m_playerY == m_rows - 2)
+            returnToFirstLevel();
     }
+}
+
+void GameEngine::returnToFirstLevel()
+{
+    if (m_currentLevel != 2 || m_gameOver)
+        return;
+
+    m_currentLevel = 1;
+    m_levelComplete = false;
+    m_playerState = "idle";
+    loadLevel();
 }
 
 void GameEngine::dig()
