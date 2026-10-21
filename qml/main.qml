@@ -126,7 +126,9 @@ Window {
                 width: board.width
                 text: gameEngine.currentLevel === 2
                       ? qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать. Нижний левый угол — возврат на первый уровень, Esc — выход")
-                      : qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать, Esc — выход")
+                      : gameEngine.prizesLeft === 0
+                        ? qsTr("Призы собраны. Нижний левый угол — перейти на второй уровень, Esc — выход")
+                        : qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать, Esc — выход")
                 color: "#cbd5e1"
                 font.pixelSize: 15
                 horizontalAlignment: Text.AlignHCenter

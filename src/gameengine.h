@@ -148,8 +148,19 @@ signals:
     void levelChanged();
 
 private:
+    struct LevelSnapshot {
+        QVector<QString> grid;
+        int playerX = 0;
+        int playerY = 0;
+        int prizesLeft = 0;
+        bool levelComplete = false;
+        bool valid = false;
+    };
+
     void loadLevel();
+    void saveCurrentLevel();
     void returnToFirstLevel();
+    void returnToSecondLevel();
     QChar tileAt(int row, int col) const;
     void setTileAt(int row, int col, QChar ch);
     bool playerCanEnter(int row, int col) const;
@@ -168,6 +179,8 @@ private:
     bool m_levelComplete = false;
 
     QVector<QString> m_grid; // каждый QString — строка уровня
+    LevelSnapshot m_level1Snapshot;
+    LevelSnapshot m_level2Snapshot;
 
     QHash<int, QTimer*> m_dugTileTimers;
 

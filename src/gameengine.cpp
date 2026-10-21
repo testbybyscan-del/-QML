@@ -50,10 +50,20 @@ void GameEngine::loadLevel()
     m_dugTileTimers.clear();
 
     const QVector<QString> &level = m_currentLevel == 1 ? kLevel1 : kLevel2;
+    const LevelSnapshot &snapshot = m_currentLevel == 1 ? m_level1Snapshot : m_level2Snapshot;
+    const bool restoringSnapshot = snapshot.valid;
     m_rows = level.size();
     m_columns = level.isEmpty() ? 0 : level.first().size();
-    m_grid = level;
-    m_prizesLeft = 0;
+    m_grid = restoringSnapshot ? snapshot.grid : level;
+    if (restoringSnapshot) {
+        m_playerX = snapshot.playerX;
+        m_playerY = snapshot.playerY;
+        m_prizesLeft = snapshot.prizesLeft;
+        m_levelComplete = snapshot.levelComplete;
+    } else {
+        m_prizesLeft = 0;
+        m_levelComplete = false;
+    }
 
     QVector<TileModel::Tile> tiles;
     QVector<EnemyModel::Enemy> enemies;
@@ -68,11 +78,15 @@ void GameEngine::loadLevel()
             case '-': type = "rope"; break;
             case '$':
                 type = "gold";
-                ++m_prizesLeft;
+                if (!restoringSnapshot)
+                    ++m_prizesLeft;
                 break;
             case 'P':
-                m_playerX = c; m_playerY = r;
-                m_grid[r][c] = '.';
+                if (!restoringSnapshot) {
+                    m_playerX = c;
+                    m_playerY = r;
+                    m_grid[r][c] = '.';
+                }
                 type = "empty";
                 break;
             case 'C': type = "crystal"; break;
@@ -158,6 +172,7 @@ void GameEngine::movePlayer(int dx, int dy)
             emit scoreChanged();
             if (m_prizesLeft == 0) {
                 if (m_currentLevel == 1) {
+                    saveCurrentLevel();
                     m_currentLevel = 2;
                     m_playerState = "idle";
                     loadLevel();
@@ -175,9 +190,24 @@ void GameEngine::movePlayer(int dx, int dy)
         emit playerPositionChanged();
         emit playerStateChanged();
 
-        if (m_currentLevel == 2 && m_playerX == 1 && m_playerY == m_rows - 2)
-            returnToFirstLevel();
+        if (m_playerX == 1 && m_playerY == m_rows - 2) {
+            if (m_currentLevel == 2)
+                returnToFirstLevel();
+            else if (m_currentLevel == 1 && m_prizesLeft == 0 && m_level2Snapshot.valid)
+                returnToSecondLevel();
+        }
     }
+}
+
+void GameEngine::saveCurrentLevel()
+{
+    LevelSnapshot &snapshot = m_currentLevel == 1 ? m_level1Snapshot : m_level2Snapshot;
+    snapshot.grid = m_grid;
+    snapshot.playerX = m_playerX;
+    snapshot.playerY = m_playerY;
+    snapshot.prizesLeft = m_prizesLeft;
+    snapshot.levelComplete = m_levelComplete;
+    snapshot.valid = true;
 }
 
 void GameEngine::returnToFirstLevel()
@@ -185,8 +215,19 @@ void GameEngine::returnToFirstLevel()
     if (m_currentLevel != 2 || m_gameOver)
         return;
 
+    saveCurrentLevel();
     m_currentLevel = 1;
-    m_levelComplete = false;
+    m_playerState = "idle";
+    loadLevel();
+}
+
+void GameEngine::returnToSecondLevel()
+{
+    if (m_currentLevel != 1 || m_prizesLeft != 0 || !m_level2Snapshot.valid || m_gameOver)
+        return;
+
+    saveCurrentLevel();
+    m_currentLevel = 2;
     m_playerState = "idle";
     loadLevel();
 }
