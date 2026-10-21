@@ -7,6 +7,7 @@ Item {
 
     property int size: 32
     property string type: "empty"
+    property color crystalColor: "#35d6c4"
 
     Rectangle {
         anchors.fill: parent
@@ -33,8 +34,8 @@ Item {
             width: parent.width * 0.62
             height: parent.height * 0.62
             rotation: 45
-            color: "#35d6c4"
-            border.color: "#b7fff6"
+            color: tile.crystalColor
+            border.color: tile.crystalColor
             border.width: 2
 
             Rectangle {

@@ -4,7 +4,7 @@
 // Легенда уровня:
 //  '#' кирпич, 'H' лестница, '-' верёвка, '$' золото,
 //  'P' старт игрока, 'E' враг, '.' пусто
-static const QVector<QString> kLevel = {
+static const QVector<QString> kLevel1 = {
     "####################",
     "#..$....#C#.....$..#",
     "#.......#C#........#",
@@ -17,6 +17,22 @@ static const QVector<QString> kLevel = {
     "#....####C####.....#",
     "#.......#C#........#",
     "#..P..$........$...#",
+    "####################"
+};
+
+static const QVector<QString> kLevel2 = {
+    "####################",
+    "#..$....#C#....$...#",
+    "#..###..#C#...###..#",
+    "#....#...$...#.....#",
+    "#...####.C.####.$..#",
+    "#.###...#C#....###.#",
+    "#..$..#..C..#...$..#",
+    "#...###..$...###...#",
+    "#....#...C....#....#",
+    "#..#####.C.#####...#",
+    "#.$...#..C..#....$.#",
+    "#..P............$..#",
     "####################"
 };
 
@@ -33,9 +49,10 @@ void GameEngine::loadLevel()
     }
     m_dugTileTimers.clear();
 
-    m_rows = kLevel.size();
-    m_columns = kLevel.isEmpty() ? 0 : kLevel.first().size();
-    m_grid = kLevel;
+    const QVector<QString> &level = m_currentLevel == 1 ? kLevel1 : kLevel2;
+    m_rows = level.size();
+    m_columns = level.isEmpty() ? 0 : level.first().size();
+    m_grid = level;
     m_prizesLeft = 0;
 
     QVector<TileModel::Tile> tiles;
@@ -118,6 +135,12 @@ void GameEngine::movePlayer(int dx, int dy)
             --m_prizesLeft;
             emit scoreChanged();
             if (m_prizesLeft == 0) {
+                if (m_currentLevel == 1) {
+                    m_currentLevel = 2;
+                    m_playerState = "idle";
+                    loadLevel();
+                    return;
+                }
                 m_levelComplete = true;
                 emit statusChanged();
             }
@@ -166,6 +189,13 @@ void GameEngine::dig()
 
 void GameEngine::updateCrystals()
 {
+    const auto isGem = [this](int row, int col) {
+        const QChar tile = tileAt(row, col);
+        return tile == 'C' || tile == '$';
+    };
+    const auto gemType = [](QChar tile) {
+        return tile == '$' ? QStringLiteral("gold") : QStringLiteral("crystal");
+    };
     // A dug tile is stored as '.', so it remains available to crystal movement until rebuilt.
     const auto isEmpty = [this](int row, int col) {
         return tileAt(row, col) == '.' && !(row == m_playerY && col == m_playerX);
@@ -173,8 +203,9 @@ void GameEngine::updateCrystals()
 
     for (int row = m_rows - 2; row >= 1; --row) {
         for (int col = 1; col < m_columns - 1; ++col) {
-            if (tileAt(row, col) != 'C')
+            if (!isGem(row, col))
                 continue;
+            const QChar fallingGem = tileAt(row, col);
 
             if (tileAt(row + 1, col) == '.') {
                 if (!isEmpty(row + 1, col)
@@ -183,13 +214,13 @@ void GameEngine::updateCrystals()
                     continue;
 
                 setTileAt(row, col, '.');
-                setTileAt(row + 1, col, 'C');
+                setTileAt(row + 1, col, fallingGem);
                 m_tilesModel.updateTile(row, col, "empty");
-                m_tilesModel.updateTile(row + 1, col, "crystal");
+                m_tilesModel.updateTile(row + 1, col, gemType(fallingGem));
                 return;
             }
 
-            if (tileAt(row + 1, col) != 'C')
+            if (!isGem(row + 1, col))
                 continue;
 
             // B sits on A. It can tumble around A if both cells on one side
@@ -206,19 +237,21 @@ void GameEngine::updateCrystals()
                 continue;
 
             int chainTop = row;
-            while (chainTop > 1 && tileAt(chainTop - 1, col) == 'C')
+            while (chainTop > 1 && isGem(chainTop - 1, col))
                 --chainTop;
 
+            const QChar tumblingGem = tileAt(row + 1, col);
             setTileAt(row, col, '.');
-            setTileAt(row + 1, col + tumbleDirection, 'C');
+            setTileAt(row + 1, col + tumbleDirection, tumblingGem);
             m_tilesModel.updateTile(row, col, "empty");
-            m_tilesModel.updateTile(row + 1, col + tumbleDirection, "crystal");
+            m_tilesModel.updateTile(row + 1, col + tumbleDirection, gemType(tumblingGem));
 
             for (int sourceRow = row - 1; sourceRow >= chainTop; --sourceRow) {
                 const int destinationRow = sourceRow + 1;
-                setTileAt(destinationRow, col, 'C');
+                const QChar shiftedGem = tileAt(sourceRow, col);
+                setTileAt(destinationRow, col, shiftedGem);
                 setTileAt(sourceRow, col, '.');
-                m_tilesModel.updateTile(destinationRow, col, "crystal");
+                m_tilesModel.updateTile(destinationRow, col, gemType(shiftedGem));
                 m_tilesModel.updateTile(sourceRow, col, "empty");
             }
             return;

@@ -1,4 +1,5 @@
 #include <QGuiApplication>
+#include <QQuickWindow>
 #include <QQmlApplicationEngine>
 #include <QtQml/qqml.h>
 #include <QUrl>
@@ -18,5 +19,7 @@ int main(int argc, char *argv[])
     engine.load(url);
     if (engine.rootObjects().isEmpty())
         return -1;
+    if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first()))
+        window->show();
     return app.exec();
 }

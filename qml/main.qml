@@ -75,7 +75,7 @@ Window {
 
                 Text {
                     width: parent.width / 2
-                    text: qsTr("LODE RUNNER")
+                    text: qsTr("LODE RUNNER — УРОВЕНЬ %1").arg(gameEngine.currentLevel)
                     color: "#f3f4f6"
                     font.pixelSize: 22
                     font.bold: true
@@ -109,6 +109,7 @@ Window {
                         y: model.row * root.tileSize
                         size: root.tileSize
                         type: model.type
+                        crystalColor: gameEngine.currentLevel === 2 ? "#db4f9b" : "#35d6c4"
                     }
                 }
 
