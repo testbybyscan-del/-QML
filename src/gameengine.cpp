@@ -123,6 +123,28 @@ void GameEngine::movePlayer(int dx, int dy)
     int nx = m_playerX + dx;
     int ny = m_playerY + dy;
 
+    if (dy == 0 && dx != 0 && tileAt(ny, nx) == 'C') {
+        const int destinationX = nx + dx;
+        const auto enemyAt = [this, ny](int col) {
+            for (const auto &enemy : m_enemiesModel.enemies()) {
+                if (enemy.x == col && enemy.y == ny)
+                    return true;
+            }
+            return false;
+        };
+
+        if (tileAt(ny, destinationX) != '.'
+                || (ny == m_playerY && destinationX == m_playerX)
+                || enemyAt(destinationX))
+            return;
+
+        // Push exactly one crystal by one cell; the crystal above it then follows normal gravity.
+        setTileAt(ny, nx, '.');
+        setTileAt(ny, destinationX, 'C');
+        m_tilesModel.updateTile(ny, nx, "empty");
+        m_tilesModel.updateTile(ny, destinationX, "crystal");
+    }
+
     if (playerCanEnter(ny, nx)) {
         m_playerX = nx;
         m_playerY = ny;
