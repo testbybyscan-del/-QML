@@ -6,16 +6,16 @@
 //  'P' старт игрока, 'E' враг, '.' пусто
 static const QVector<QString> kLevel = {
     "####################",
-    "#....#...C....#....#",
-    "#....#...C....#....#",
-    "#....#...C....#....#",
-    "#....#...C....#....#",
-    "#....###...###.....#",
-    "#....#...C....#....#",
-    "#....#...C....#....#",
-    "#....#...C....#....#",
-    "#....###...###.....#",
-    "#....#...C....#....#",
+    "#....#...C...#.....#",
+    "#....#...C...#.....#",
+    "#....#...C...#.....#",
+    "#....#...C...#.....#",
+    "#....###.C.###.....#",
+    "#....#...C...#.....#",
+    "#....#...C...#.....#",
+    "#....#...C...#.....#",
+    "#....###.C.###.....#",
+    "#....#...C...#.....#",
     "#..P...............#",
     "####################"
 };
@@ -132,6 +132,7 @@ void GameEngine::dig()
     int by = m_playerY + 1; // копаем вниз-вбок (классика Lode Runner)
 
     if (tileAt(by, bx) == '#') {
+        // Dug cells become empty in the simulation grid, so crystals can fall or tumble into them.
         setTileAt(by, bx, '.');
         m_tilesModel.updateTile(by, bx, "dug");
 
@@ -156,6 +157,7 @@ void GameEngine::dig()
 
 void GameEngine::updateCrystals()
 {
+    // A dug tile is stored as '.', so it remains available to crystal movement until rebuilt.
     const auto isEmpty = [this](int row, int col) {
         return tileAt(row, col) == '.' && !(row == m_playerY && col == m_playerX);
     };
