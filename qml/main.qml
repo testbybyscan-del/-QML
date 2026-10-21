@@ -102,17 +102,6 @@ Window {
                     }
                 }
 
-                Repeater {
-                    model: gameEngine.enemiesModel
-                    delegate: Enemy {
-                        x: model.x * root.tileSize
-                        y: model.y * root.tileSize
-                        size: root.tileSize
-                        state: model.state
-                        facingRight: model.facingRight
-                    }
-                }
-
                 Player {
                     x: gameEngine.playerX * root.tileSize
                     y: gameEngine.playerY * root.tileSize
