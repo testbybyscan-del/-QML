@@ -134,6 +134,7 @@ public:
     Q_INVOKABLE void movePlayer(int dx, int dy);
     Q_INVOKABLE void dig();
     Q_INVOKABLE void updateGame();
+    Q_INVOKABLE void updateCrystals();
 
 signals:
     void playerPositionChanged();

@@ -6,15 +6,16 @@
 //  'P' старт игрока, 'E' враг, '.' пусто
 static const QVector<QString> kLevel = {
     "####################",
-    "#..................#",
-    "#..................#",
-    "#..########........#",
-    "#..................#",
-    "#....####....####..#",
-    "#....#..........#..#",
-    "#..................#",
-    "#....####....####..#",
-    "#..................#",
+    "#....#...C....#....#",
+    "#....#...C....#....#",
+    "#....#...C....#....#",
+    "#....#...C....#....#",
+    "#....###...###.....#",
+    "#....#...C....#....#",
+    "#....#...C....#....#",
+    "#....#...C....#....#",
+    "#....###...###.....#",
+    "#....#...C....#....#",
     "#..P...............#",
     "####################"
 };
@@ -50,8 +51,10 @@ void GameEngine::loadLevel()
             case '$': type = "gold"; break;
             case 'P':
                 m_playerX = c; m_playerY = r;
+                m_grid[r][c] = '.';
                 type = "empty";
                 break;
+            case 'C': type = "crystal"; break;
             case 'E':
                 enemies.append({c, r, "run", true});
                 type = "empty";
@@ -87,9 +90,7 @@ void GameEngine::setTileAt(int row, int col, QChar ch)
 bool GameEngine::playerCanEnter(int row, int col) const
 {
     QChar ch = tileAt(row, col);
-    // Игрок может проходить через пустое, лестницу, верёвку, золото.
-    // В кирпич — нельзя (по нему можно ходить сверху).
-    return ch != '#';
+    return ch != '#' && ch != 'C';
 }
 
 void GameEngine::movePlayer(int dx, int dy)
@@ -150,6 +151,67 @@ void GameEngine::dig()
 
         m_playerState = "dig";
         emit playerStateChanged();
+    }
+}
+
+void GameEngine::updateCrystals()
+{
+    const auto isEmpty = [this](int row, int col) {
+        return tileAt(row, col) == '.' && !(row == m_playerY && col == m_playerX);
+    };
+
+    for (int row = m_rows - 2; row >= 1; --row) {
+        for (int col = 1; col < m_columns - 1; ++col) {
+            if (tileAt(row, col) != 'C')
+                continue;
+
+            if (tileAt(row + 1, col) == '.') {
+                if (!isEmpty(row + 1, col)
+                        || !isEmpty(row, col - 1)
+                        || !isEmpty(row, col + 1))
+                    continue;
+
+                setTileAt(row, col, '.');
+                setTileAt(row + 1, col, 'C');
+                m_tilesModel.updateTile(row, col, "empty");
+                m_tilesModel.updateTile(row + 1, col, "crystal");
+                return;
+            }
+
+            if (tileAt(row + 1, col) != 'C')
+                continue;
+
+            // B sits on A. It can tumble around A if both cells on one side
+            // of the pair are clear; the rest of their vertical chain follows down.
+            int tumbleDirection = 0;
+            for (int direction : {1, -1}) {
+                if (isEmpty(row, col + direction)
+                        && isEmpty(row + 1, col + direction)) {
+                    tumbleDirection = direction;
+                    break;
+                }
+            }
+            if (tumbleDirection == 0)
+                continue;
+
+            int chainTop = row;
+            while (chainTop > 1 && tileAt(chainTop - 1, col) == 'C')
+                --chainTop;
+
+            setTileAt(row, col, '.');
+            setTileAt(row + 1, col + tumbleDirection, 'C');
+            m_tilesModel.updateTile(row, col, "empty");
+            m_tilesModel.updateTile(row + 1, col + tumbleDirection, "crystal");
+
+            for (int sourceRow = row - 1; sourceRow >= chainTop; --sourceRow) {
+                const int destinationRow = sourceRow + 1;
+                setTileAt(destinationRow, col, 'C');
+                setTileAt(sourceRow, col, '.');
+                m_tilesModel.updateTile(destinationRow, col, "crystal");
+                m_tilesModel.updateTile(sourceRow, col, "empty");
+            }
+            return;
+        }
     }
 }
 

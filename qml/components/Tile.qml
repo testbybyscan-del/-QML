@@ -23,4 +23,28 @@ Item {
             color: "#a0522d"
         }
     }
+
+    Item {
+        anchors.fill: parent
+        visible: tile.type === "crystal"
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: parent.width * 0.62
+            height: parent.height * 0.62
+            rotation: 45
+            color: "#35d6c4"
+            border.color: "#b7fff6"
+            border.width: 2
+
+            Rectangle {
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.margins: 4
+                width: 5
+                height: 5
+                color: "#e5fffc"
+            }
+        }
+    }
 }

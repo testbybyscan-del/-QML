@@ -19,6 +19,13 @@ Window {
         id: gameEngine
     }
 
+    Timer {
+        interval: 250
+        running: true
+        repeat: true
+        onTriggered: gameEngine.updateCrystals()
+    }
+
     Item {
         id: gameRoot
         anchors.fill: parent
