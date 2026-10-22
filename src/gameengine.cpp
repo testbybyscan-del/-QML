@@ -56,7 +56,7 @@ static const QVector<QString> kLevel3 = {
     "#...###...###...##.#",
     "#..$....C....$.....#",
     "#.####..#...###..#.#",
-    "#Xx........P#$..$..#",
+    "#Xx........P#$..$xX#",
     "####################"
 };
 
@@ -162,14 +162,19 @@ bool GameEngine::playerCanEnter(int row, int col) const
     return ch != '#' && ch != 'C';
 }
 
-void GameEngine::generateLandscape(int seed)
+void GameEngine::generateNextLandscape()
 {
     if (m_gameOver)
         return;
 
+    // Seed скрыт от игрока и увеличивается при каждой попытке генерации.
+    // Если все кандидаты будут отклонены, повторный вход в выход запустит
+    // новую воспроизводимую попытку с другим seed.
+    const int nextSeed = m_landscapeSeed + 1;
+    m_landscapeSeed = nextSeed;
     QString error;
     const QVector<QString> generated = LandscapeGenerator::generate(
-            static_cast<quint32>(seed), &error);
+            static_cast<quint32>(nextSeed), &error);
     if (generated.isEmpty()) {
         // Если правила генератора не смогли собрать корректную карту,
         // текущий уровень и позиция игрока остаются без изменений.
@@ -177,28 +182,16 @@ void GameEngine::generateLandscape(int seed)
         return;
     }
 
-    // Сохраняем текущую карту перед переходом. Это позволяет вернуться
-    // к ручному уровню через портал и не потерять собранные там Призы.
+    // Персонаж уже вошёл в выходную клетку только после сбора всех обязательных
+    // Призов. Сохраняем текущую карту, чтобы левый портал позволял вернуться.
     if (m_currentLevel >= 1 && m_currentLevel <= m_levels.size())
         saveCurrentLevel();
 
-    const int generatedIndex = kLevels.size();
-    const int generatedLevelNumber = generatedIndex + 1;
-    if (m_currentLevel != generatedLevelNumber)
-        m_generatedReturnLevel = m_currentLevel;
-
-    if (m_levels.size() == generatedIndex) {
-        m_levels.append(generated);
-        m_levelSnapshots.append(LevelSnapshot{});
-    } else {
-        // Повторная генерация заменяет предыдущую случайную карту, но не
-        // добавляет бесконечные уровни и снимки в память.
-        m_levels[generatedIndex] = generated;
-        m_levelSnapshots[generatedIndex] = LevelSnapshot{};
-    }
-
-    m_landscapeSeed = seed;
-    m_currentLevel = generatedIndex + 1;
+    // Каждый выход создаёт следующий уровень, не затирая предыдущий.
+    // Благодаря снимкам игрок может вернуться через левый портал.
+    m_levels.append(generated);
+    m_levelSnapshots.append(LevelSnapshot{});
+    m_currentLevel = m_levels.size();
     m_playerState = "idle";
     loadLevel();
 }
@@ -246,10 +239,8 @@ void GameEngine::movePlayer(int dx, int dy)
             --m_prizesLeft;
             emit scoreChanged();
             if (m_prizesLeft == 0) {
-                if (m_currentLevel < m_levels.size()) {
-                    switchToLevel(m_currentLevel + 1);
-                    return;
-                }
+                // Сбор наград открывает возможность продолжить, но сам по себе
+                // не покидает экран: переход совершается только у правого выхода.
                 m_levelComplete = true;
                 emit statusChanged();
             }
@@ -271,14 +262,19 @@ void GameEngine::movePlayer(int dx, int dy)
         emit playerPositionChanged();
         emit playerStateChanged();
 
-        if (m_playerY == m_rows - 2 && m_playerX == 1 && m_currentLevel > 1) {
-            const int previousLevel = m_currentLevel == kLevels.size() + 1
-                    ? m_generatedReturnLevel : m_currentLevel - 1;
-            switchToLevel(previousLevel);
+        if (m_playerY == m_rows - 2 && m_playerX == 1
+                && tileAt(m_playerY, m_playerX) == 'X' && m_currentLevel > 1) {
+            switchToLevel(m_currentLevel - 1);
+        } else if (m_playerY == m_rows - 2 && m_playerX == m_columns - 2
+                   && tileAt(m_playerY, m_playerX) == 'X' && m_prizesLeft == 0) {
+            // Сначала проходим заранее созданные ручные карты. Когда следующего
+            // уровня ещё нет, выход запускает генератор и добавляет новый.
+            const int nextLevel = m_currentLevel + 1;
+            if (nextLevel <= m_levels.size())
+                switchToLevel(nextLevel);
+            else
+                generateNextLandscape();
         }
-        else if (m_playerY == m_rows - 2 && m_playerX == m_columns - 2
-                 && m_prizesLeft == 0 && m_currentLevel < m_levels.size())
-            switchToLevel(m_currentLevel + 1);
     }
 }
 
@@ -298,11 +294,6 @@ void GameEngine::switchToLevel(int targetLevel)
     if (targetLevel < 1 || targetLevel > m_levels.size()
             || targetLevel == m_currentLevel || m_gameOver)
         return;
-
-    // Если игрок завершил третий ручной уровень и автоматически дошёл до
-    // генератора, обратный портал должен вести именно на этот уровень.
-    if (targetLevel == kLevels.size() + 1)
-        m_generatedReturnLevel = m_currentLevel;
 
     saveCurrentLevel();
     m_currentLevel = targetLevel;

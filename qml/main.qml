@@ -75,8 +75,8 @@ Window {
 
                 Text {
                     width: parent.width / 2
-                    text: gameEngine.currentLevel === 4
-                          ? qsTr("ПЕЙЗАЖ — SEED %1").arg(gameEngine.landscapeSeed)
+                    text: gameEngine.currentLevel >= 4
+                          ? qsTr("ПЕЙЗАЖ %1").arg(gameEngine.currentLevel)
                           : qsTr("BOULDER DASH — УРОВЕНЬ %1").arg(gameEngine.currentLevel)
                     color: "#f3f4f6"
                     font.pixelSize: 22
@@ -114,7 +114,7 @@ Window {
                         crystalColor: gameEngine.currentLevel === 2
                                       ? "#db4f9b"
                                       : gameEngine.currentLevel === 3 ? "#38bdf8"
-                                      : gameEngine.currentLevel === 4 ? "#c084fc" : "#35d6c4"
+                                      : gameEngine.currentLevel >= 4 ? "#c084fc" : "#35d6c4"
                     }
                 }
 
@@ -127,72 +127,13 @@ Window {
                 }
             }
 
-            Row {
-                width: board.width
-                spacing: 8
-
-                Rectangle {
-                    width: (board.width - parent.spacing) / 2
-                    height: 34
-                    radius: 6
-                    color: nextLandscapeMouseArea.containsMouse ? "#334155" : "#263449"
-                    border.color: "#64748b"
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: qsTr("Новый seed %1").arg(gameEngine.landscapeSeed + 1)
-                        color: "#e2e8f0"
-                        font.pixelSize: 15
-                    }
-
-                    MouseArea {
-                        id: nextLandscapeMouseArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: {
-                            gameEngine.generateLandscape(gameEngine.landscapeSeed + 1)
-                            gameRoot.forceActiveFocus()
-                        }
-                    }
-                }
-
-                Rectangle {
-                    width: (board.width - parent.spacing) / 2
-                    height: 34
-                    radius: 6
-                    opacity: gameEngine.currentLevel === 4 ? 1 : 0.5
-                    color: repeatLandscapeMouseArea.containsMouse ? "#334155" : "#263449"
-                    border.color: "#64748b"
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: qsTr("Повторить seed %1").arg(gameEngine.landscapeSeed)
-                        color: "#e2e8f0"
-                        font.pixelSize: 15
-                    }
-
-                    MouseArea {
-                        id: repeatLandscapeMouseArea
-                        anchors.fill: parent
-                        enabled: gameEngine.currentLevel === 4
-                        hoverEnabled: true
-                        onClicked: {
-                            gameEngine.generateLandscape(gameEngine.landscapeSeed)
-                            gameRoot.forceActiveFocus()
-                        }
-                    }
-                }
-            }
-
             Text {
                 width: board.width
-                text: gameEngine.levelComplete
-                      ? qsTr("Все призы собраны. Нижний левый угол — предыдущий экран, Esc — выход")
+                text: gameEngine.prizesLeft === 0
+                      ? qsTr("Все Призы собраны. Дойдите до выхода в правом нижнем углу, чтобы продолжить. Нижний левый угол — назад")
                       : gameEngine.currentLevel > 1
                         ? qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать. Нижний левый угол — предыдущий экран, нижний правый — следующий после сбора всех призов")
-                        : gameEngine.prizesLeft === 0
-                          ? qsTr("Призы собраны. Нижний правый угол — следующий экран, Esc — выход")
-                          : qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать, Esc — выход")
+                        : qsTr("Соберите все Призы: стрелки/WASD — движение, пробел — копать, Esc — выход")
                 color: "#cbd5e1"
                 font.pixelSize: 15
                 horizontalAlignment: Text.AlignHCenter

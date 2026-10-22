@@ -126,15 +126,20 @@ QVector<QString> createCandidate(quint32 seed)
     map[11][8] = QLatin1Char('$');
     map[11][9] = QLatin1Char('#');
 
-    // Четыре платформы создают узнаваемый ландшафт. На каждой генерация
-    // случайно выбирает разрыв и его ширину, оставляя вертикальный путь между
-    // уровнями платформ. Разрывы делают карты разными, но не превращают их
-    // в сплошные стены, отрезающие игрока от верхних областей.
+    // Четыре платформы создают основной рельеф. На каждой генерация случайно
+    // выбирает узкий вертикальный проход шириной 1–2 клетки. Такие проходы
+    // сложнее широких окон, но расположение смещается между платформами, чтобы
+    // игроку приходилось искать маршрут по диагонали через несколько рядов.
     const int platformRows[] = {2, 4, 6, 8};
+    int gapStarts[4] = {};
+    int gapWidths[4] = {};
     QVector<QPoint> supportedCells;
-    for (int platformRow : platformRows) {
-        const int gapStart = 4 + random.bounded(10); // столбцы 4..13
-        const int gapWidth = 2 + random.bounded(3);  // ширина 2..4 клетки
+    for (int platformIndex = 0; platformIndex < 4; ++platformIndex) {
+        const int platformRow = platformRows[platformIndex];
+        const int gapStart = 4 + random.bounded(11); // столбцы 4..14
+        const int gapWidth = 1 + random.bounded(2);  // ширина 1–2 клетки
+        gapStarts[platformIndex] = gapStart;
+        gapWidths[platformIndex] = gapWidth;
 
         for (int col = 2; col <= 17; ++col) {
             const bool insideGap = col >= gapStart && col < gapStart + gapWidth;
@@ -159,11 +164,31 @@ QVector<QString> createCandidate(quint32 seed)
         map[platformRow - 1][prizeCol] = QLatin1Char('$');
     }
 
-    // Добавляем кристаллы на поддержанные клетки. Они остаются препятствиями,
-    // а не наградами; их клетки не используются как проходы или точки старта.
-    // Повторный выбор пропускается, если там уже стоит обычный Приз.
+    // Короткие вертикальные простенки под первыми тремя платформами превращают
+    // плоские полки в череду ниш. Основные шахты не застраиваем: в их координатах
+    // проход должен оставаться открытым. Последний горизонтальный ряд (9)
+    // намеренно оставлен свободным как связующий маршрут к правому выходу.
+    for (int platformIndex = 0; platformIndex < 3; ++platformIndex) {
+        const int supportRow = platformRows[platformIndex] + 1;
+        const int pillarCount = 2 + random.bounded(2); // 2–3 простенка
+        int pillarsPlaced = 0;
+        for (int attempt = 0; attempt < 32 && pillarsPlaced < pillarCount; ++attempt) {
+            const int col = 2 + random.bounded(16); // внутренние столбцы 2..17
+            const bool insideShaft = col >= gapStarts[platformIndex]
+                    && col < gapStarts[platformIndex] + gapWidths[platformIndex];
+            if (insideShaft || map[supportRow][col] != QLatin1Char('.'))
+                continue;
+            map[supportRow][col] = QLatin1Char('#');
+            ++pillarsPlaced;
+        }
+    }
+
+    // Кристаллов теперь заметно больше: каждый seed размещает от 6 до 8 штук.
+    // Они остаются препятствиями, а не наградами. Для каждого кристалла ниже
+    // валидатор проверит сторону подхода и свободную клетку толкания.
+    const int targetCrystals = 6 + random.bounded(3);
     int crystalsPlaced = 0;
-    for (int attempt = 0; attempt < 40 && crystalsPlaced < 3; ++attempt) {
+    for (int attempt = 0; attempt < 120 && crystalsPlaced < targetCrystals; ++attempt) {
         const QPoint cell = supportedCells[random.bounded(supportedCells.size())];
         if (map[cell.y()][cell.x()] != QLatin1Char('.'))
             continue;
@@ -220,6 +245,7 @@ bool validateCandidate(const QVector<QString> &map, QString *reason)
 
     int playerCount = 0;
     int prizeCount = 0;
+    int crystalCount = 0;
     int superPrizeCount = 0;
     int exitCount = 0;
     QPoint start;
@@ -231,6 +257,8 @@ bool validateCandidate(const QVector<QString> &map, QString *reason)
                 start = QPoint(col, row);
             } else if (tile == QLatin1Char('$')) {
                 ++prizeCount;
+            } else if (tile == QLatin1Char('C')) {
+                ++crystalCount;
             } else if (tile == QLatin1Char('S')) {
                 ++superPrizeCount;
             } else if (tile == QLatin1Char('X')) {
@@ -252,6 +280,8 @@ bool validateCandidate(const QVector<QString> &map, QString *reason)
         return fail(QStringLiteral("на карте должна быть ровно одна стартовая позиция"));
     if (prizeCount < 1)
         return fail(QStringLiteral("на карте нет обязательных Призов"));
+    if (crystalCount < 6 || crystalCount > 8)
+        return fail(QStringLiteral("количество Кристаллов должно быть от 6 до 8"));
     if (superPrizeCount > 1)
         return fail(QStringLiteral("на карте больше одного Суперприза"));
     if (exitCount < 1)
