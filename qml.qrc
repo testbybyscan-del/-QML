@@ -8,5 +8,6 @@
         <file alias="levels/Level2.qml">qml/levels/Level2.qml</file>
         <file alias="levels/Level3.qml">qml/levels/Level3.qml</file>
         <file alias="levels/Level4.qml">qml/levels/Level4.qml</file>
+        <file alias="levels/Level5.qml">qml/levels/Level5.qml</file>
     </qresource>
 </RCC>

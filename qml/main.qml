@@ -20,6 +20,7 @@ Window {
     Levels.Level2 { id: level2 }
     Levels.Level3 { id: level3 }
     Levels.Level4 { id: level4 }
+    Levels.Level5 { id: level5 }
 
     GameEngine {
         id: gameEngine
@@ -167,7 +168,7 @@ Window {
 
         Component.onCompleted: {
             gameEngine.initializeLevels([
-                level1.rows, level2.rows, level3.rows, level4.rows
+                level1.rows, level2.rows, level3.rows, level4.rows, level5.rows
             ])
             forceActiveFocus()
         }
