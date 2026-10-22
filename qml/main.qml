@@ -111,7 +111,7 @@ Window {
                         type: model.type
                         crystalColor: gameEngine.currentLevel === 2
                                       ? "#db4f9b"
-                                      : gameEngine.currentLevel === 3 ? "#fbbf24" : "#35d6c4"
+                                      : gameEngine.currentLevel === 3 ? "#38bdf8" : "#35d6c4"
                     }
                 }
 
