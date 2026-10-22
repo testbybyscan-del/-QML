@@ -111,6 +111,7 @@ Window {
                         y: model.row * root.tileSize
                         size: root.tileSize
                         type: model.type
+                        exitAvailable: gameEngine.prizesLeft === 0
                         crystalColor: gameEngine.currentLevel === 2
                                       ? "#db4f9b"
                                       : gameEngine.currentLevel === 3 ? "#38bdf8"

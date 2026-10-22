@@ -9,6 +9,9 @@ Item {
     property int size: 32
     property string type: "empty"
     property color crystalColor: "#35d6c4"
+    // Выход становится доступен после сбора всех обязательных Призов.
+    // Состояние приходит из GameEngine и обновляется вместе со счётчиком.
+    property bool exitAvailable: false
 
     Rectangle {
         anchors.fill: parent
@@ -29,9 +32,25 @@ Item {
     Rectangle {
         anchors.fill: parent
         visible: tile.type === "exit"
-        color: "#173d2c"
-        border.color: "#4ade80"
+        color: tile.exitAvailable ? "#14532d" : "#173d2c"
+        border.color: tile.exitAvailable ? "#bef264" : "#4ade80"
         border.width: 2
+
+        // Пульсирующая заливка показывает, что Персонаж выполнил условие
+        // уровня и может перейти дальше, если войдёт в эту клетку.
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 2
+            color: "#86efac"
+            opacity: 0
+
+            SequentialAnimation on opacity {
+                running: tile.exitAvailable
+                loops: Animation.Infinite
+                NumberAnimation { from: 0.08; to: 0.48; duration: 450; easing.type: Easing.InOutSine }
+                NumberAnimation { from: 0.48; to: 0.08; duration: 450; easing.type: Easing.InOutSine }
+            }
+        }
 
         Text {
             anchors.centerIn: parent
@@ -39,6 +58,7 @@ Item {
             color: "#bbf7d0"
             font.pixelSize: tile.size * 0.65
             font.bold: true
+            z: 1
         }
     }
 
