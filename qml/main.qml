@@ -109,7 +109,9 @@ Window {
                         y: model.row * root.tileSize
                         size: root.tileSize
                         type: model.type
-                        crystalColor: gameEngine.currentLevel === 2 ? "#db4f9b" : "#35d6c4"
+                        crystalColor: gameEngine.currentLevel === 2
+                                      ? "#db4f9b"
+                                      : gameEngine.currentLevel === 3 ? "#fbbf24" : "#35d6c4"
                     }
                 }
 

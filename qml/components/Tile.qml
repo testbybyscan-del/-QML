@@ -25,6 +25,22 @@ Item {
         }
     }
 
+    Rectangle {
+        anchors.fill: parent
+        visible: tile.type === "exit"
+        color: "#173d2c"
+        border.color: "#4ade80"
+        border.width: 2
+
+        Text {
+            anchors.centerIn: parent
+            text: "↔"
+            color: "#bbf7d0"
+            font.pixelSize: tile.size * 0.65
+            font.bold: true
+        }
+    }
+
     Item {
         anchors.fill: parent
         visible: tile.type === "crystal"
