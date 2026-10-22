@@ -1,6 +1,8 @@
-# LodeRunner на Qt 6 + QML
+# Boulder Dash на Qt 6 + QML
 
-Учебный проект: реализация классической игры Lode Runner (в духе KGoldrunner) на C++ и QML. Цель проекта — не столько сама игра, сколько освоение связки **C++ (логика) + QML (визуализация) + CMake (сборка) + VS Code (среда)**.
+Учебный проект: игра теперь называется **Boulder Dash**. Проект написан на C++ и QML; цель — освоить связку **C++ (логика) + QML (визуализация) + CMake (сборка) + VS Code (среда)**.
+
+Исполняемый файл называется `boulderdash`, а URI QML — `BoulderDash`.
 
 > Этот README одновременно является шпаргалкой и учебным планом. Читайте сверху вниз, возвращайтесь к разделам по мере необходимости.
 
@@ -26,7 +28,7 @@
 
 ## Что это за проект
 
-Lode Runner — платформенная игра 1983 года. Игрок бегает по кирпичной сетке, собирает золото, роет ямы в кирпичах, чтобы ловить врагов, и должен собрать всё золото, чтобы пройти уровень.
+В текущей реализации игрок перемещается по сетке, собирает золото и может рыть ямы, чтобы задерживать врагов. Эти игровые механики описаны ниже; название проекта — Boulder Dash.
 
 Проект реализует:
 
@@ -94,7 +96,7 @@ cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
 
 # Запуск
-./build/loderunner
+./build/boulderdash
 ```
 
 ### Из VS Code
@@ -116,7 +118,7 @@ cmake -B build -G Ninja -DCMAKE_PREFIX_PATH=/opt/Qt/6.6.0/gcc_64
 ## Структура проекта
 
 ```
-loderunner/
+boulderdash/
 ├── CMakeLists.txt              # Описание сборки
 ├── main.cpp                    # Точка входа приложения
 ├── README.md                   # Этот файл
@@ -183,7 +185,7 @@ class GameEngine : public QObject
 В `main.qml`:
 
 ```qml
-import LodeRunner 1.0   // модуль, объявленный в qt_add_qml_module
+import BoulderDash 1.0   // модуль, объявленный в qt_add_qml_module
 
 GameEngine {
     id: gameEngine
@@ -194,7 +196,7 @@ Text {
 }
 ```
 
-`import LodeRunner 1.0` — это URI модуля из `CMakeLists.txt`. Поскольку `GameEngine` помечен `QML_ELEMENT`, он доступен по имени в этом модуле.
+`import BoulderDash 1.0` — это URI модуля из `CMakeLists.txt`. Поскольку `GameEngine` помечен `QML_ELEMENT`, он доступен по имени в этом модуле.
 
 ### 3. Свойства, сигналы, слоты
 
@@ -551,10 +553,10 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug LodeRunner",
+            "name": "Debug Boulder Dash",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/loderunner",
+            "program": "${workspaceFolder}/build/boulderdash",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -586,7 +588,7 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
     "name": "QML Debug",
     "type": "cppdbg",
     "request": "launch",
-    "program": "${workspaceFolder}/build/loderunner",
+    "program": "${workspaceFolder}/build/boulderdash",
     "args": ["-qmljsdebugger=port:10000,block"],
     "MIMode": "gdb"
 }
@@ -711,7 +713,7 @@ Host github.com
 
 Практика: замените счётчик из этапа 2 на `Q_PROPERTY` и покажите его в QML.
 
-### Этап 5. Игровая логика LodeRunner (2–3 недели)
+### Этап 5. Игровая логика Boulder Dash (2–3 недели)
 
 Что делать:
 
@@ -769,7 +771,7 @@ Host github.com
 
 ### Открытый код для изучения
 
-- [KGoldrunner](https://invent.kde.org/games/kgoldrunner) — Lode Runner на Qt Widgets.
+- [KGoldrunner](https://invent.kde.org/games/kgoldrunner) — классический платформер на Qt Widgets.
 - [Same Game](https://code.qt.io/cgit/qt/qtquickcontrols2.git/) — простой пример на QML.
 
 ### Инструменты
@@ -786,7 +788,7 @@ Host github.com
 | Симптом | Вероятная причина | Решение |
 |---------|-------------------|---------|
 | `Cannot assign to non-existent property` | C++ тип не зарегистрирован в QML | Проверить `QML_ELEMENT` и `qt_standard_project_setup` |
-| `module "LodeRunner" is not installed` | Не совпадает URI в CMake и import в QML | Сверить `URI` и `import` |
+| `module "BoulderDash" is not installed` | Не совпадает URI в CMake и import в QML | Сверить `URI` и `import` |
 | `undefined reference to vtable` | Забыт `Q_OBJECT` или moc не прогнан | Запустить CMake заново, проверить CMakeLists |
 | QML не обновляется при изменении | Не запускается QML-кэш | Удалить `build/`, пересобрать |
 | `No such file or directory: QApplication` | Забыт `#include <QApplication>` | Добавить инклюд |

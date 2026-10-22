@@ -1,4 +1,4 @@
-# Запуск игры LodeRunner
+# Запуск игры Boulder Dash
 
 ## Требования к системе
 
@@ -25,7 +25,7 @@ cmake --build build-qt5
 
 ### 3. Запуск игры
 ```bash
-./build-qt5/loderunner
+./build-qt5/boulderdash
 ```
 
 ## Альтернативные способы запуска

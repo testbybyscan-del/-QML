@@ -2,10 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug LodeRunner",
+            "name": "Debug Boulder Dash",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build-qt5/loderunner",
+            "program": "${workspaceFolder}/build-qt5/boulderdash",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

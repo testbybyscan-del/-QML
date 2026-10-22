@@ -316,7 +316,7 @@ void GameEngine::dig()
 
     int dx = m_playerFacingRight ? 1 : -1;
     int bx = m_playerX + dx;
-    int by = m_playerY + 1; // копаем вниз-вбок (классика Lode Runner)
+    int by = m_playerY + 1; // копаем вниз-вбок
 
     const bool insidePerimeter = by > 0 && by < m_rows - 1
             && bx > 0 && bx < m_columns - 1;

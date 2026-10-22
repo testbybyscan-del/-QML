@@ -1,7 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Window 2.15
 import "components"
-import LodeRunner 1.0
+import BoulderDash 1.0
 
 Window {
     id: root
@@ -10,7 +10,7 @@ Window {
     height: 600
     minimumWidth: 680
     minimumHeight: 520
-    title: qsTr("Lode Runner")
+    title: qsTr("Boulder Dash")
     color: "#111827"
 
     readonly property int tileSize: 32
@@ -77,7 +77,7 @@ Window {
                     width: parent.width / 2
                     text: gameEngine.currentLevel === 4
                           ? qsTr("ПЕЙЗАЖ — SEED %1").arg(gameEngine.landscapeSeed)
-                          : qsTr("LODE RUNNER — УРОВЕНЬ %1").arg(gameEngine.currentLevel)
+                          : qsTr("BOULDER DASH — УРОВЕНЬ %1").arg(gameEngine.currentLevel)
                     color: "#f3f4f6"
                     font.pixelSize: 22
                     font.bold: true

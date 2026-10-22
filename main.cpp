@@ -8,7 +8,7 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
-    qmlRegisterType<GameEngine>("LodeRunner", 1, 0, "GameEngine");
+    qmlRegisterType<GameEngine>("BoulderDash", 1, 0, "GameEngine");
     QQmlApplicationEngine engine;
     const QUrl url(QStringLiteral("qrc:/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,

@@ -1,4 +1,4 @@
-loderunner/
+boulderdash/
 ├── CMakeLists.txt              # Главный файл сборки
 ├── main.cpp                    # Точка входа (загружает QML)
 ├── src/                        # C++ бэкенд (игровая логика)
