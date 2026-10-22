@@ -251,6 +251,10 @@ void GameEngine::dig()
         });
         timer->start(15000);
 
+        // Освобождённая клетка сразу участвует в симуляции:
+        // предмет над ней начинает падать в этом же действии копания.
+        updateCrystals();
+
         m_playerState = "dig";
         emit playerStateChanged();
     }
@@ -292,12 +296,9 @@ void GameEngine::updateCrystals()
                 return;
             }
 
-            if (tileAt(row + 1, col) == '.') {
-                if (!isEmpty(row + 1, col)
-                        || !isEmpty(row, col - 1)
-                        || !isEmpty(row, col + 1))
-                    continue;
-
+            // Для падения нужна свободная клетка именно снизу.
+            // Боковые стены не должны удерживать объект над пустотой.
+            if (isEmpty(row + 1, col)) {
                 setTileAt(row, col, '.');
                 setTileAt(row + 1, col, fallingGem);
                 m_tilesModel.updateTile(row, col, "empty");
