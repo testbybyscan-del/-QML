@@ -113,6 +113,7 @@ class GameEngine : public QObject
     Q_PROPERTY(int score READ score NOTIFY scoreChanged)
     Q_PROPERTY(int prizesLeft READ prizesLeft NOTIFY scoreChanged)
     Q_PROPERTY(int lives READ lives NOTIFY scoreChanged)
+    Q_PROPERTY(bool hasKey READ hasKey NOTIFY statusChanged)
     Q_PROPERTY(bool gameOver READ gameOver NOTIFY statusChanged)
     Q_PROPERTY(bool levelComplete READ levelComplete NOTIFY statusChanged)
     Q_PROPERTY(TileModel* tilesModel READ tilesModel CONSTANT)
@@ -132,6 +133,7 @@ public:
     int score() const { return m_score; }
     int prizesLeft() const { return m_prizesLeft; }
     int lives() const { return m_lives; }
+    bool hasKey() const { return m_hasKey; }
     bool gameOver() const { return m_gameOver; }
     bool levelComplete() const { return m_levelComplete; }
 
@@ -181,6 +183,7 @@ private:
     int m_score = 0;
     int m_prizesLeft = 0;
     int m_lives = 3;
+    bool m_hasKey = false;
     bool m_gameOver = false;
     bool m_levelComplete = false;
 

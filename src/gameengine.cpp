@@ -31,7 +31,7 @@ void GameEngine::initializeLevels(const QVariantList &authoredLevels)
                               " одинаковую ненулевую ширину";
                 return;
             }
-            const QString validTiles = QStringLiteral("#.$PXCxSH-E");
+            const QString validTiles = QStringLiteral("#.$PXCxSH-EKB");
             for (QChar tile : row) {
                 if (!validTiles.contains(tile)) {
                     qWarning() << "Неизвестный символ карты в QML-уровне:" << tile;
@@ -64,6 +64,7 @@ void GameEngine::initializeLevels(const QVariantList &authoredLevels)
     // добавляются в этот же список и используют общую загрузку и снимки.
     m_levels = levels;
     m_authoredLevelCount = levels.size();
+    m_hasKey = false;
     m_levelSnapshots.clear();
     m_levelSnapshots.resize(m_levels.size());
     m_currentLevel = 1;
@@ -105,6 +106,8 @@ void GameEngine::loadLevel()
             case '#': type = "brick"; break;
             case 'X': type = "exit"; break;
             case 'x': type = "empty"; break;
+            case 'B': type = "safe"; break;
+            case 'K': type = "key"; break;
             case 'H': type = "ladder"; break;
             case '-': type = "rope"; break;
             case '$':
@@ -157,6 +160,8 @@ void GameEngine::setTileAt(int row, int col, QChar ch)
 bool GameEngine::playerCanEnter(int row, int col) const
 {
     QChar ch = tileAt(row, col);
+    if (ch == QLatin1Char('B') && !m_hasKey)
+        return false;
     return ch != '#' && ch != 'C';
 }
 
@@ -251,6 +256,26 @@ void GameEngine::movePlayer(int dx, int dy)
             m_tilesModel.updateTile(ny, nx, "empty");
             m_score += 25;
             emit scoreChanged();
+        }
+
+        // Ключ переносится между экранами: его символ удаляется с карты,
+        // а состояние хранится в GameEngine до открытия Сейфа.
+        if (tileAt(ny, nx) == 'K') {
+            setTileAt(ny, nx, '.');
+            m_tilesModel.updateTile(ny, nx, "empty");
+            m_hasKey = true;
+            emit statusChanged();
+        }
+
+        // Сейф остаётся непроходимым без Ключа. При открытии он исчезает,
+        // Ключ расходуется, а игрок получает отдельные 100 очков.
+        if (tileAt(ny, nx) == 'B' && m_hasKey) {
+            setTileAt(ny, nx, '.');
+            m_tilesModel.updateTile(ny, nx, "empty");
+            m_hasKey = false;
+            m_score += 100;
+            emit scoreChanged();
+            emit statusChanged();
         }
 
         if (dy < 0) m_playerState = "climb";

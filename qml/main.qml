@@ -93,10 +93,11 @@ Window {
 
                 Text {
                     width: parent.width / 2
-                    text: qsTr("Призы: %1   Очки: %2   Жизни: %3")
+                    text: qsTr("Призы: %1   Очки: %2   Жизни: %3   Ключ: %4")
                           .arg(gameEngine.prizesLeft)
                           .arg(gameEngine.score)
                           .arg(gameEngine.lives)
+                          .arg(gameEngine.hasKey ? "есть" : "нет")
                     color: "#d1d5db"
                     font.pixelSize: 18
                     horizontalAlignment: Text.AlignRight
@@ -119,6 +120,7 @@ Window {
                         y: model.row * root.tileSize
                         size: root.tileSize
                         type: model.type
+                        hasKey: gameEngine.hasKey
                         exitAvailable: gameEngine.prizesLeft === 0
                         crystalColor: gameEngine.currentLevel === 2
                                       ? "#db4f9b"

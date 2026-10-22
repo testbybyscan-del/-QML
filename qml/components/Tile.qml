@@ -9,6 +9,7 @@ Item {
     property int size: 32
     property string type: "empty"
     property color crystalColor: "#35d6c4"
+    property bool hasKey: false
     // Выход становится доступен после сбора всех обязательных Призов.
     // Состояние приходит из GameEngine и обновляется вместе со счётчиком.
     property bool exitAvailable: false
@@ -59,6 +60,79 @@ Item {
             font.pixelSize: tile.size * 0.65
             font.bold: true
             z: 1
+        }
+    }
+
+    // Запертый Сейф — отдельная статичная клетка, не участник физики.
+    Item {
+        anchors.fill: parent
+        visible: tile.type === "safe"
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: parent.width * 0.76
+            height: parent.height * 0.68
+            radius: 4
+            color: "#475569"
+            border.color: tile.hasKey ? "#facc15" : "#94a3b8"
+            border.width: 2
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.width * 0.4
+                height: width
+                radius: width / 2
+                color: "#cbd5e1"
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width * 0.42
+                    height: width
+                    radius: width / 2
+                    color: "#1e293b"
+                }
+            }
+        }
+    }
+
+    // Ключ собирается при входе в клетку и переносится между уровнями.
+    Item {
+        anchors.fill: parent
+        visible: tile.type === "key"
+
+        Rectangle {
+            x: parent.width * 0.45
+            y: parent.height * 0.47
+            width: parent.width * 0.43
+            height: parent.height * 0.13
+            rotation: -35
+            radius: height / 2
+            color: "#facc15"
+        }
+
+        Rectangle {
+            x: parent.width * 0.14
+            y: parent.height * 0.23
+            width: parent.width * 0.4
+            height: width
+            radius: width / 2
+            color: "#facc15"
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.width * 0.42
+                height: width
+                radius: width / 2
+                color: "#172033"
+            }
+        }
+
+        Rectangle {
+            x: parent.width * 0.65
+            y: parent.height * 0.57
+            width: parent.width * 0.1
+            height: parent.height * 0.2
+            color: "#facc15"
         }
     }
 
