@@ -1,5 +1,7 @@
 #include "gameengine.h"
+#include "landscapegenerator.h"
 #include <QtMath>
+#include <QDebug>
 
 // Легенда уровня:
 //  '#' кирпич, 'H' лестница, '-' верёвка, '$' золото,
@@ -63,7 +65,10 @@ static const QVector<QVector<QString>> kLevels = {kLevel1, kLevel2, kLevel3};
 
 GameEngine::GameEngine(QObject *parent) : QObject(parent)
 {
-    m_levelSnapshots.resize(kLevels.size());
+    // Ручные карты остаются эталонными уровнями, а генератор добавляет
+    // отдельную карту в тот же список и использует общую загрузку уровня.
+    m_levels = kLevels;
+    m_levelSnapshots.resize(m_levels.size());
     loadLevel();
 }
 
@@ -75,7 +80,7 @@ void GameEngine::loadLevel()
     }
     m_dugTileTimers.clear();
 
-    const QVector<QString> &level = kLevels.at(m_currentLevel - 1);
+    const QVector<QString> &level = m_levels.at(m_currentLevel - 1);
     const LevelSnapshot &snapshot = m_levelSnapshots.at(m_currentLevel - 1);
     const bool restoringSnapshot = snapshot.valid;
     m_rows = level.size();
@@ -109,6 +114,7 @@ void GameEngine::loadLevel()
                 if (!restoringSnapshot)
                     ++m_prizesLeft;
                 break;
+            case 'S': type = "superPrize"; break;
             case 'P':
                 if (!restoringSnapshot) {
                     m_playerX = c;
@@ -156,6 +162,47 @@ bool GameEngine::playerCanEnter(int row, int col) const
     return ch != '#' && ch != 'C';
 }
 
+void GameEngine::generateLandscape(int seed)
+{
+    if (m_gameOver)
+        return;
+
+    QString error;
+    const QVector<QString> generated = LandscapeGenerator::generate(
+            static_cast<quint32>(seed), &error);
+    if (generated.isEmpty()) {
+        // Если правила генератора не смогли собрать корректную карту,
+        // текущий уровень и позиция игрока остаются без изменений.
+        qWarning() << "Landscape generation failed:" << error;
+        return;
+    }
+
+    // Сохраняем текущую карту перед переходом. Это позволяет вернуться
+    // к ручному уровню через портал и не потерять собранные там Призы.
+    if (m_currentLevel >= 1 && m_currentLevel <= m_levels.size())
+        saveCurrentLevel();
+
+    const int generatedIndex = kLevels.size();
+    const int generatedLevelNumber = generatedIndex + 1;
+    if (m_currentLevel != generatedLevelNumber)
+        m_generatedReturnLevel = m_currentLevel;
+
+    if (m_levels.size() == generatedIndex) {
+        m_levels.append(generated);
+        m_levelSnapshots.append(LevelSnapshot{});
+    } else {
+        // Повторная генерация заменяет предыдущую случайную карту, но не
+        // добавляет бесконечные уровни и снимки в память.
+        m_levels[generatedIndex] = generated;
+        m_levelSnapshots[generatedIndex] = LevelSnapshot{};
+    }
+
+    m_landscapeSeed = seed;
+    m_currentLevel = generatedIndex + 1;
+    m_playerState = "idle";
+    loadLevel();
+}
+
 void GameEngine::movePlayer(int dx, int dy)
 {
     if (m_gameOver) return;
@@ -199,13 +246,22 @@ void GameEngine::movePlayer(int dx, int dy)
             --m_prizesLeft;
             emit scoreChanged();
             if (m_prizesLeft == 0) {
-                if (m_currentLevel < kLevels.size()) {
+                if (m_currentLevel < m_levels.size()) {
                     switchToLevel(m_currentLevel + 1);
                     return;
                 }
                 m_levelComplete = true;
                 emit statusChanged();
             }
+        }
+
+        // Суперприз — отдельная награда: он даёт 25 очков, но не уменьшает
+        // количество обязательных обычных Призов для завершения уровня.
+        if (tileAt(ny, nx) == 'S') {
+            setTileAt(ny, nx, '.');
+            m_tilesModel.updateTile(ny, nx, "empty");
+            m_score += 25;
+            emit scoreChanged();
         }
 
         if (dy < 0) m_playerState = "climb";
@@ -215,10 +271,13 @@ void GameEngine::movePlayer(int dx, int dy)
         emit playerPositionChanged();
         emit playerStateChanged();
 
-        if (m_playerY == m_rows - 2 && m_playerX == 1 && m_currentLevel > 1)
-            switchToLevel(m_currentLevel - 1);
+        if (m_playerY == m_rows - 2 && m_playerX == 1 && m_currentLevel > 1) {
+            const int previousLevel = m_currentLevel == kLevels.size() + 1
+                    ? m_generatedReturnLevel : m_currentLevel - 1;
+            switchToLevel(previousLevel);
+        }
         else if (m_playerY == m_rows - 2 && m_playerX == m_columns - 2
-                 && m_prizesLeft == 0 && m_currentLevel < kLevels.size())
+                 && m_prizesLeft == 0 && m_currentLevel < m_levels.size())
             switchToLevel(m_currentLevel + 1);
     }
 }
@@ -236,9 +295,14 @@ void GameEngine::saveCurrentLevel()
 
 void GameEngine::switchToLevel(int targetLevel)
 {
-    if (targetLevel < 1 || targetLevel > kLevels.size()
+    if (targetLevel < 1 || targetLevel > m_levels.size()
             || targetLevel == m_currentLevel || m_gameOver)
         return;
+
+    // Если игрок завершил третий ручной уровень и автоматически дошёл до
+    // генератора, обратный портал должен вести именно на этот уровень.
+    if (targetLevel == kLevels.size() + 1)
+        m_generatedReturnLevel = m_currentLevel;
 
     saveCurrentLevel();
     m_currentLevel = targetLevel;
@@ -288,10 +352,12 @@ void GameEngine::updateCrystals()
 {
     const auto isGem = [this](int row, int col) {
         const QChar tile = tileAt(row, col);
-        return tile == 'C' || tile == '$';
+        return tile == 'C' || tile == '$' || tile == 'S';
     };
     const auto gemType = [](QChar tile) {
-        return tile == '$' ? QStringLiteral("gold") : QStringLiteral("crystal");
+        if (tile == '$') return QStringLiteral("gold");
+        if (tile == 'S') return QStringLiteral("superPrize");
+        return QStringLiteral("crystal");
     };
     // A dug tile is stored as '.', so it remains available to crystal movement until rebuilt.
     const auto isEmpty = [this](int row, int col) {

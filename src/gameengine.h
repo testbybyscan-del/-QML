@@ -104,6 +104,7 @@ class GameEngine : public QObject
     Q_PROPERTY(int columns READ columns NOTIFY levelChanged)
     Q_PROPERTY(int rows READ rows NOTIFY levelChanged)
     Q_PROPERTY(int currentLevel READ currentLevel NOTIFY levelChanged)
+    Q_PROPERTY(int landscapeSeed READ landscapeSeed NOTIFY levelChanged)
     Q_PROPERTY(int playerX READ playerX NOTIFY playerPositionChanged)
     Q_PROPERTY(int playerY READ playerY NOTIFY playerPositionChanged)
     Q_PROPERTY(QString playerState READ playerState NOTIFY playerStateChanged)
@@ -122,6 +123,7 @@ public:
     int columns() const { return m_columns; }
     int rows() const { return m_rows; }
     int currentLevel() const { return m_currentLevel; }
+    int landscapeSeed() const { return m_landscapeSeed; }
     int playerX() const { return m_playerX; }
     int playerY() const { return m_playerY; }
     QString playerState() const { return m_playerState; }
@@ -139,6 +141,7 @@ public:
     Q_INVOKABLE void dig();
     Q_INVOKABLE void updateGame();
     Q_INVOKABLE void updateCrystals();
+    Q_INVOKABLE void generateLandscape(int seed);
 
 signals:
     void playerPositionChanged();
@@ -167,6 +170,8 @@ private:
     int m_columns = 0;
     int m_rows = 0;
     int m_currentLevel = 1;
+    int m_generatedReturnLevel = 3;
+    int m_landscapeSeed = 0;
     int m_playerX = 0;
     int m_playerY = 0;
     QString m_playerState = "idle";
@@ -178,6 +183,7 @@ private:
     bool m_levelComplete = false;
 
     QVector<QString> m_grid; // каждый QString — строка уровня
+    QVector<QVector<QString>> m_levels;
     QVector<LevelSnapshot> m_levelSnapshots;
 
     QHash<int, QTimer*> m_dugTileTimers;

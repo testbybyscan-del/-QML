@@ -75,7 +75,9 @@ Window {
 
                 Text {
                     width: parent.width / 2
-                    text: qsTr("LODE RUNNER — УРОВЕНЬ %1").arg(gameEngine.currentLevel)
+                    text: gameEngine.currentLevel === 4
+                          ? qsTr("ПЕЙЗАЖ — SEED %1").arg(gameEngine.landscapeSeed)
+                          : qsTr("LODE RUNNER — УРОВЕНЬ %1").arg(gameEngine.currentLevel)
                     color: "#f3f4f6"
                     font.pixelSize: 22
                     font.bold: true
@@ -111,7 +113,8 @@ Window {
                         type: model.type
                         crystalColor: gameEngine.currentLevel === 2
                                       ? "#db4f9b"
-                                      : gameEngine.currentLevel === 3 ? "#38bdf8" : "#35d6c4"
+                                      : gameEngine.currentLevel === 3 ? "#38bdf8"
+                                      : gameEngine.currentLevel === 4 ? "#c084fc" : "#35d6c4"
                     }
                 }
 
@@ -121,6 +124,63 @@ Window {
                     size: root.tileSize
                     state: gameEngine.playerState
                     facingRight: gameEngine.playerFacingRight
+                }
+            }
+
+            Row {
+                width: board.width
+                spacing: 8
+
+                Rectangle {
+                    width: (board.width - parent.spacing) / 2
+                    height: 34
+                    radius: 6
+                    color: nextLandscapeMouseArea.containsMouse ? "#334155" : "#263449"
+                    border.color: "#64748b"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: qsTr("Новый seed %1").arg(gameEngine.landscapeSeed + 1)
+                        color: "#e2e8f0"
+                        font.pixelSize: 15
+                    }
+
+                    MouseArea {
+                        id: nextLandscapeMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: {
+                            gameEngine.generateLandscape(gameEngine.landscapeSeed + 1)
+                            gameRoot.forceActiveFocus()
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: (board.width - parent.spacing) / 2
+                    height: 34
+                    radius: 6
+                    opacity: gameEngine.currentLevel === 4 ? 1 : 0.5
+                    color: repeatLandscapeMouseArea.containsMouse ? "#334155" : "#263449"
+                    border.color: "#64748b"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: qsTr("Повторить seed %1").arg(gameEngine.landscapeSeed)
+                        color: "#e2e8f0"
+                        font.pixelSize: 15
+                    }
+
+                    MouseArea {
+                        id: repeatLandscapeMouseArea
+                        anchors.fill: parent
+                        enabled: gameEngine.currentLevel === 4
+                        hoverEnabled: true
+                        onClicked: {
+                            gameEngine.generateLandscape(gameEngine.landscapeSeed)
+                            gameRoot.forceActiveFocus()
+                        }
+                    }
                 }
             }
 

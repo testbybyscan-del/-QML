@@ -19,6 +19,8 @@ add_executable(loderunner
     main.cpp
     src/gameengine.cpp
     src/gameengine.h
+    src/landscapegenerator.cpp
+    src/landscapegenerator.h
     ${QML_RESOURCES}
 )
 

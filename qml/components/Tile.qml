@@ -4,6 +4,7 @@ Item {
     id: tile
     width: size
     height: size
+    clip: true
 
     property int size: 32
     property string type: "empty"
@@ -86,6 +87,45 @@ Item {
                 height: 5
                 color: "#fff8d6"
             }
+        }
+    }
+
+    Item {
+        id: superPrizeVisual
+        anchors.fill: parent
+        visible: tile.type === "superPrize"
+
+        Rectangle {
+            id: superPrizeDiamond
+            anchors.centerIn: parent
+            width: parent.width * 0.58
+            height: parent.height * 0.58
+            rotation: 45
+            radius: 3
+            color: "#7c3aed"
+            border.color: "#e9d5ff"
+            border.width: 2
+
+            SequentialAnimation on scale {
+                loops: Animation.Infinite
+                NumberAnimation { from: 0.92; to: 1.04; duration: 650; easing.type: Easing.InOutSine }
+                NumberAnimation { from: 1.04; to: 0.92; duration: 650; easing.type: Easing.InOutSine }
+            }
+
+            RotationAnimation on rotation {
+                from: 45
+                to: 405
+                duration: 5000
+                loops: Animation.Infinite
+            }
+        }
+
+        Text {
+            anchors.centerIn: parent
+            text: "✦"
+            color: "#fff7ed"
+            font.pixelSize: tile.size * 0.48
+            font.bold: true
         }
     }
 }
