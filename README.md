@@ -1,10 +1,10 @@
-# Boulder Dash на Qt 6 + QML
+# Boulder Dash на Qt 5.15 + QML
 
 Учебный проект: игра теперь называется **Boulder Dash**. Проект написан на C++ и QML; цель — освоить связку **C++ (логика) + QML (визуализация) + CMake (сборка) + VS Code (среда)**.
 
-Исполняемый файл называется `boulderdash`, а URI QML — `BoulderDash`.
+Исполняемый файл называется `boulderdash`, а C++-тип `GameEngine` регистрируется в QML под URI `BoulderDash`.
 
-> Этот README одновременно является шпаргалкой и учебным планом. Читайте сверху вниз, возвращайтесь к разделам по мере необходимости.
+> Этот README содержит обзор проекта и справочные заметки. Пошаговые материалы для самостоятельной разработки собраны отдельно: [`LEARNING_01.md`](LEARNING_01.md) → [`LEARNING_02.md`](LEARNING_02.md) → [`LEARNING_03.md`](LEARNING_03.md).
 
 ---
 
@@ -28,23 +28,18 @@
 
 ## Что это за проект
 
-В текущей реализации игрок перемещается по сетке, собирает золото и может рыть ямы, чтобы задерживать врагов. Эти игровые механики описаны ниже; название проекта — Boulder Dash.
+В текущей реализации Персонаж перемещается по сетке, собирает обязательные Призы, толкает Кристаллы и копает кирпичи. После сбора всех обязательных Призов нижний правый выход становится доступен и подсвечивается; переход происходит, когда Персонаж входит в него.
 
 Проект реализует:
 
-- **Сетку уровня** 20×12 тайлов (кирпич, лестница, верёвка, золото, пустота).
-- **Игрока** с гравитацией, движением и копанием.
-- **Врагов** с простейшим ИИ (движение, разворот у стены, погоня).
-- **Игровой цикл** ~60 FPS через `QTimer`.
-- **HUD**: счёт, жизни, сообщения о победе/проигрыше.
+- **Три ручных уровня** и автоматически создаваемые пейзажи размером 20×13 клеток.
+- **Персонажа** с управлением с клавиатуры, копанием и столкновениями.
+- **Кристаллы, Призы и Суперпризы** с пошаговой физикой; Суперприз приносит 25 очков.
+- **Генератор пейзажей** с воспроизводимым seed и проверкой кандидатов перед загрузкой.
+- **Переходы между уровнями** с сохранением состояния при возвращении через левый портал.
+- **HUD** со счётчиком Призов, очками и жизнями.
 
-Что **не реализовано** (можно добавить самостоятельно как упражнение):
-
-- Анимация спрайтов через `SpriteSequence`.
-- Звук.
-- Несколько уровней с переходом между ними.
-- Полноценное поведение врагов (лазание по лестницам, падение в вырытые ямы).
-- Сохранение прогресса.
+В проекте пока нет активных врагов в отображаемых уровнях: `EnemyModel` и QML-компонент существуют как задел. Также пока нет звука, графических спрайтов и сохранения прогресса на диск.
 
 ---
 
@@ -54,9 +49,9 @@
 
 | Компонент | Версия | Зачем |
 |-----------|--------|-------|
-| **Qt 6.5+** | 6.5 или новее | Основной фреймворк (`Qt6::Quick`, `Qt6::Qml`, `Qt6::Gui`) |
-| **CMake** | 3.21+ | Система сборки |
-| **Компилятор** | GCC 11+, Clang 14+ | Сборка C++17 |
+| **Qt** | 5.15 или новее | Модули Core, Quick, Gui и Qml (`Qt5::...`) |
+| **CMake** | 3.16+ | Система сборки |
+| **Компилятор** | C++17 | Сборка проекта |
 | **Ninja** | любая | Быстрый генератор сборки |
 | **Git** | любая | Версионирование |
 | **VS Code** | последняя | Редактор |
@@ -65,14 +60,14 @@
 
 Самый надёжный способ — **Qt Online Installer** с [qt.io/download](https://www.qt.io/download-qt-installer). Выберите:
 
-- Qt 6.5 или 6.6
-- Компоненты: **Desktop gcc 64-bit**, **Qt Quick**, **Qt Debug Information Files** (опционально)
+- Qt 5.15
+- Компоненты: **Desktop gcc 64-bit**, Qt Quick/QML и средства разработки
 
 Альтернатива — через `aqtinstall`:
 
 ```bash
 pip install aqtinstall
-aqt install-qt linux desktop 6.6.0 gcc_64
+aqt install-qt linux desktop 5.15.2 gcc_64
 ```
 
 ### Расширения VS Code
@@ -89,15 +84,17 @@ aqt install-qt linux desktop 6.6.0 gcc_64
 ### Из терминала
 
 ```bash
-# Первый раз — конфигурация
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+# Конфигурация проекта (Qt 5.15)
+cmake -S . -B build-qt5 -G Ninja -DCMAKE_BUILD_TYPE=Debug
 
 # Сборка
-cmake --build build
+cmake --build build-qt5
 
 # Запуск
-./build/boulderdash
+./build-qt5/boulderdash
 ```
+
+Или выполните `./build_and_run.sh`. Подробности установки зависимостей находятся в [`README_RUN.md`](README_RUN.md).
 
 ### Из VS Code
 
@@ -110,7 +107,7 @@ cmake --build build
 Укажите путь явно:
 
 ```bash
-cmake -B build -G Ninja -DCMAKE_PREFIX_PATH=/opt/Qt/6.6.0/gcc_64
+cmake -S . -B build-qt5 -G Ninja -DCMAKE_PREFIX_PATH=/opt/Qt/5.15.2/gcc_64
 ```
 
 ---
@@ -118,34 +115,27 @@ cmake -B build -G Ninja -DCMAKE_PREFIX_PATH=/opt/Qt/6.6.0/gcc_64
 ## Структура проекта
 
 ```
-boulderdash/
-├── CMakeLists.txt              # Описание сборки
-├── main.cpp                    # Точка входа приложения
-├── README.md                   # Этот файл
-├── .gitignore                  # Что не коммитить
-├── .vscode/                    # Настройки VS Code
-│   ├── settings.json
-│   ├── tasks.json
-│   └── launch.json
-├── src/                        # C++ бэкенд
-│   ├── gameengine.h            # Классы GameEngine, TileModel, EnemyModel
-│   └── gameengine.cpp
-├── qml/                        # QML фронтенд
-│   ├── main.qml                # Корневое окно, игровой цикл, ввод
-│   └── components/             # Переиспользуемые компоненты
-│       ├── Player.qml
-│       ├── Enemy.qml
-│       └── Tile.qml
-└── assets/                     # Ресурсы (пока пусто)
-    ├── images/
-    └── sounds/
+.
+├── CMakeLists.txt              # Сборка под Qt 5.15 и список исходников
+├── main.cpp                    # Создание приложения и регистрация GameEngine
+├── qml.qrc                     # Включение QML-файлов в ресурсы приложения
+├── build_and_run.sh            # Настройка, сборка и запуск
+├── LEARNING_01.md              # Учебная часть 1
+├── LEARNING_02.md              # Учебная часть 2
+├── LEARNING_03.md              # Руководство по генератору
+├── src/
+│   ├── gameengine.h/.cpp       # Игровое состояние, модели и игровые правила
+│   └── landscapegenerator.h/.cpp # Создание и валидация новых пейзажей
+└── qml/
+    ├── main.qml                # Окно, ввод, HUD, игровое поле и таймер физики
+    └── components/             # Tile.qml, Player.qml, Enemy.qml
 ```
 
 ### Принцип разделения
 
-- **C++** — вся логика: сетка, коллизии, гравитация, ИИ, счёт.
-- **QML** — визуализация и ввод: как рисовать тайлы, как реагировать на клавиши.
-- **CMake** — связывает это в один исполняемый файл через `qt_add_qml_module`.
+- **C++** — игровое состояние, правила движения и сбора, физика и генерация уровней.
+- **QML** — визуализация, клавиатурный ввод и анимация подсветки доступного выхода.
+- **CMake** — собирает C++ и QML-ресурсы; проект включает QML через `qml.qrc`.
 
 ---
 
@@ -153,10 +143,11 @@ boulderdash/
 
 | Клавиша | Действие |
 |---------|----------|
-| `←` `→` | Движение влево/вправо |
-| `↑` `↓` | Лазание по лестницам, спуск по верёвкам |
-| `Space` | Рыть яму в направлении взгляда |
+| Стрелки или `W` `A` `S` `D` | Перемещение по клеткам |
+| `Space` | Копать кирпич по направлению взгляда |
 | `Esc` | Выход |
+
+Соберите все обязательные Призы, затем самостоятельно дойдите до выхода в правом нижнем углу. На уровнях после первого нижний левый портал возвращает на предыдущий экран.
 
 ---
 
@@ -166,26 +157,25 @@ boulderdash/
 
 ### 1. Регистрация C++ типа в QML
 
-В `gameengine.h`:
+В `src/gameengine.h`:
 
 ```cpp
 class GameEngine : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT          // ← автоматическая регистрация в QML
     Q_PROPERTY(int playerX READ playerX NOTIFY playerPositionChanged)
     // ...
 };
 ```
 
-Макрос `QML_ELEMENT` (требует `qt_standard_project_setup` в CMake) сообщает CMake: «этот класс должен быть доступен из QML». Никакого ручного `qmlRegisterType` писать не нужно.
+В текущем проекте используется Qt 5 и ручная регистрация типа в `main.cpp` через `qmlRegisterType<GameEngine>("BoulderDash", 1, 0, "GameEngine")`. Макрос `QML_ELEMENT` в заголовке сам по себе не выполняет регистрацию в этой конфигурации.
 
 ### 2. Использование C++ типа в QML
 
 В `main.qml`:
 
 ```qml
-import BoulderDash 1.0   // модуль, объявленный в qt_add_qml_module
+import BoulderDash 1.0   // URI, переданный в qmlRegisterType в main.cpp
 
 GameEngine {
     id: gameEngine
@@ -196,7 +186,7 @@ Text {
 }
 ```
 
-`import BoulderDash 1.0` — это URI модуля из `CMakeLists.txt`. Поскольку `GameEngine` помечен `QML_ELEMENT`, он доступен по имени в этом модуле.
+`import BoulderDash 1.0` соответствует URI, версии и имени типа из `qmlRegisterType` в `main.cpp`.
 
 ### 3. Свойства, сигналы, слоты
 
@@ -487,59 +477,53 @@ QHash<QString, int> map;
 
 ## Шпаргалка по CMake
 
-### Минимальный проект на Qt 6 с QML
+### Фрагмент сборки текущего проекта на Qt 5
 
 ```cmake
-cmake_minimum_required(VERSION 3.21)
-project(myapp VERSION 1.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.16)
+project(boulderdash VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.5 COMPONENTS Quick Gui Qml REQUIRED)
-qt_standard_project_setup(REQUIRES 6.5)
+find_package(Qt5 5.15 COMPONENTS Core Quick Gui Qml REQUIRED)
 
-qt_add_executable(myapp
+qt5_add_resources(QML_RESOURCES qml.qrc)
+
+add_executable(boulderdash
     main.cpp
     src/gameengine.cpp
     src/gameengine.h
+    src/landscapegenerator.cpp
+    src/landscapegenerator.h
+    ${QML_RESOURCES}
 )
 
-qt_add_qml_module(myapp
-    URI MyApp
-    VERSION 1.0
-    QML_FILES
-        qml/main.qml
-        qml/components/Player.qml
-)
-
-target_link_libraries(myapp PRIVATE
-    Qt6::Quick
-    Qt6::Gui
-    Qt6::Qml
+target_link_libraries(boulderdash PRIVATE
+    Qt5::Core Qt5::Quick Qt5::Gui Qt5::Qml
 )
 ```
 
 ### Ключевые команды
 
-- `find_package(Qt6 ... REQUIRED)` — находит Qt 6.
-- `qt_standard_project_setup(REQUIRES 6.5)` — устанавливает политики Qt 6.5+, включает автоматическую обработку `QML_ELEMENT`.
-- `qt_add_executable(...)` — создаёт цель-приложение (по сути `add_executable` + настройки Qt).
-- `qt_add_qml_module(...)` — регистрирует QML-файлы как модуль. Без этого QML не найдёт C++ типы.
+- `find_package(Qt5 5.15 ... REQUIRED)` — находит требуемые модули Qt 5.
+- `qt5_add_resources(...)` — включает файлы из `qml.qrc` в ресурсы исполняемого файла.
+- `add_executable(...)` — создаёт цель приложения и перечисляет C++ исходники вместе с ресурсами.
 - `target_link_libraries(...)` — линкует с Qt-модулями.
+- `qmlRegisterType` в `main.cpp` регистрирует `GameEngine`; это выполняется кодом приложения, а не CMake.
 
 ### Отладочная печать переменных
 
 ```cmake
-message(STATUS "Qt found at: ${Qt6_DIR}")
+message(STATUS "Qt found at: ${Qt5_DIR}")
 message(FATAL_ERROR "Something is wrong")
 ```
 
 ### Типы сборки
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
-cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build-qt5 -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build-qt5 -DCMAKE_BUILD_TYPE=Release
 ```
 
 ---
@@ -556,7 +540,7 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
             "name": "Debug Boulder Dash",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/boulderdash",
+            "program": "${workspaceFolder}/build-qt5/boulderdash",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -588,7 +572,7 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
     "name": "QML Debug",
     "type": "cppdbg",
     "request": "launch",
-    "program": "${workspaceFolder}/build/boulderdash",
+    "program": "${workspaceFolder}/build-qt5/boulderdash",
     "args": ["-qmljsdebugger=port:10000,block"],
     "MIMode": "gdb"
 }
@@ -683,7 +667,7 @@ Host github.com
 
 - `QObject`, родитель-потомок, автоматическое удаление.
 - Сигналы и слоты, `connect`.
-- `Q_PROPERTY`, `Q_INVOKABLE`, `QML_ELEMENT`.
+- `Q_PROPERTY`, `Q_INVOKABLE`, ручная регистрация C++ типов в QML.
 - `QTimer` — основа игрового цикла.
 
 Практика: сделайте счётчик на C++, который эмитит сигнал раз в секунду и обновляет `QLabel`.
@@ -705,7 +689,7 @@ Host github.com
 
 Что учить:
 
-- `QQmlApplicationEngine`, `loadFromModule`.
+- `QQmlApplicationEngine`, `load` и загрузка компонента из `qrc:/`.
 - `import <ModuleURI> 1.0`.
 - `Q_PROPERTY` + `NOTIFY` → реактивное обновление QML.
 - `Q_INVOKABLE` — вызов методов из QML.
@@ -722,14 +706,15 @@ Host github.com
 - Гравитация: если под игроком пусто — падать.
 - Копание: изменить тайл, обновить модель.
 - Сбор золота: удалить тайл, увеличить счёт.
-- Враг: движение, разворот, погоня, ловля игрока.
-- Победа/проигрыш: условия и переходы состояний.
+- Генератор: seed, каркас карты, размещение объектов и проверка достижимости.
+- Переходы: сбор Призов, доступность выхода, сохранение состояния экранов.
 
 ### Этап 6. Улучшения (по вкусу)
 
 - Спрайты: `SpriteSequence`, PNG-атласы.
 - Звук: `QSoundEffect` в QML.
-- Несколько уровней: массив карт, переход между ними.
+- Доработка уровней: генератор пейзажей уже реализован, его правила можно развивать.
+- Враги: `EnemyModel` и визуальный компонент есть, активного поведения в текущих уровнях нет.
 - Меню: отдельный QML-экран с кнопками.
 - Сохранение: `QSettings` или JSON.
 
@@ -747,9 +732,10 @@ Host github.com
 
 ### Официальная документация Qt
 
-- [Qt 6 Documentation](https://doc.qt.io/qt-6/) — основной справочник.
-- [QML Reference](https://doc.qt.io/qt-6/qmlreference.html) — все элементы QML.
-- [Qt Quick Examples](https://doc.qt.io/qt-6/qtquick-examples.html) — примеры кода.
+- [Qt 5.15 Documentation](https://doc.qt.io/archives/qt-5.15/) — версия, используемая проектом.
+- [Qt 5 QML Reference](https://doc.qt.io/archives/qt-5.15/qtqml-index.html) — документация QML для Qt 5.
+- [Qt Quick Examples](https://doc.qt.io/archives/qt-5.15/qtquick-examples.html) — примеры для Qt 5.15.
+- [Qt 6 Documentation](https://doc.qt.io/qt-6/) — материалы для отдельного изучения Qt 6; команды сборки проекта к Qt 6 не относятся.
 
 ### Учебники
 
@@ -787,11 +773,11 @@ Host github.com
 
 | Симптом | Вероятная причина | Решение |
 |---------|-------------------|---------|
-| `Cannot assign to non-existent property` | C++ тип не зарегистрирован в QML | Проверить `QML_ELEMENT` и `qt_standard_project_setup` |
-| `module "BoulderDash" is not installed` | Не совпадает URI в CMake и import в QML | Сверить `URI` и `import` |
+| `Cannot assign to non-existent property` | C++ тип или компонент не зарегистрирован/не загружен | Проверить `qmlRegisterType`, имя типа и компонент |
+| `module "BoulderDash" is not installed` | Не совпадает URI или версия QML-модуля | Сверить `qmlRegisterType` в `main.cpp` и `import` в QML |
 | `undefined reference to vtable` | Забыт `Q_OBJECT` или moc не прогнан | Запустить CMake заново, проверить CMakeLists |
-| QML не обновляется при изменении | Не запускается QML-кэш | Удалить `build/`, пересобрать |
-| `No such file or directory: QApplication` | Забыт `#include <QApplication>` | Добавить инклюд |
+| QML не обновляется при изменении | Не испущен `NOTIFY` сигнал или модель не отправила уведомление | Проверить сигнал свойства, `dataChanged()` и reset модели |
+| Ошибка про `QApplication` | Подключён неподходящий класс приложения для Qt Quick | В этом проекте используется `QGuiApplication`; проверить заголовок и CMake-модули |
 | Программа падает при старте | Скорее всего, null pointer или отсутствующий QML | Запустить под отладчиком, посмотреть стек |
 | `Permission denied (publickey)` при git push | SSH-ключ не добавлен на GitHub | См. раздел «Работа с Git» |
 
