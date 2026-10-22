@@ -134,6 +134,7 @@ QVector<QString> createCandidate(quint32 seed)
     int gapStarts[4] = {};
     int gapWidths[4] = {};
     QVector<QPoint> supportedCells;
+    QVector<QVector<QPoint>> supportedCellsByPlatform(4);
     for (int platformIndex = 0; platformIndex < 4; ++platformIndex) {
         const int platformRow = platformRows[platformIndex];
         const int gapStart = 4 + random.bounded(11); // столбцы 4..14
@@ -147,8 +148,15 @@ QVector<QString> createCandidate(quint32 seed)
                 map[platformRow][col] = QLatin1Char('#');
                 // Оставляем один столбец запаса по краям: к предмету можно
                 // подойти с обеих сторон, не упираясь сразу в боковую стену.
-                if (col > 2 && col < 17)
+                // Клетки непосредственно у края шахты остаются пустыми:
+                // это боковые «лазейки», через которые можно войти на полку.
+                const bool nextToShaft = col == gapStart - 1
+                        || col == gapStart + gapWidth;
+                if (col > 2 && col < 17 && !nextToShaft) {
                     supportedCells.append(QPoint(col, platformRow - 1));
+                    supportedCellsByPlatform[platformIndex].append(
+                            QPoint(col, platformRow - 1));
+                }
             }
         }
 
@@ -183,16 +191,27 @@ QVector<QString> createCandidate(quint32 seed)
         }
     }
 
-    // Кристаллов теперь заметно больше: каждый seed размещает от 6 до 8 штук.
-    // Они остаются препятствиями, а не наградами. Для каждого кристалла ниже
-    // валидатор проверит сторону подхода и свободную клетку толкания.
-    const int targetCrystals = 6 + random.bounded(3);
+    // Плотный рельеф заставляет игрока прокладывать маршрут между препятствиями.
+    // Каждый уровень получает ровно 20 Кристаллов, равномерно по пять над
+    // каждой платформой. Соседние с шахтами клетки не
+    // входят в supportedCells, поэтому у каждой платформы остаются лазейки.
+    // Финальная проверка дополнительно убеждается, что Кристаллы можно толкать,
+    // а все обязательные Призы и выход достижимы.
+    constexpr int targetCrystals = 20;
+    constexpr int crystalsPerPlatform = targetCrystals / 4;
+    int crystalsOnPlatform[4] = {};
     int crystalsPlaced = 0;
-    for (int attempt = 0; attempt < 120 && crystalsPlaced < targetCrystals; ++attempt) {
-        const QPoint cell = supportedCells[random.bounded(supportedCells.size())];
+    for (int attempt = 0; attempt < 480 && crystalsPlaced < targetCrystals; ++attempt) {
+        const int platformIndex = random.bounded(4);
+        if (crystalsOnPlatform[platformIndex] >= crystalsPerPlatform)
+            continue;
+
+        const QVector<QPoint> &platformCells = supportedCellsByPlatform[platformIndex];
+        const QPoint cell = platformCells[random.bounded(platformCells.size())];
         if (map[cell.y()][cell.x()] != QLatin1Char('.'))
             continue;
         map[cell.y()][cell.x()] = QLatin1Char('C');
+        ++crystalsOnPlatform[platformIndex];
         ++crystalsPlaced;
     }
 
@@ -280,8 +299,8 @@ bool validateCandidate(const QVector<QString> &map, QString *reason)
         return fail(QStringLiteral("на карте должна быть ровно одна стартовая позиция"));
     if (prizeCount < 1)
         return fail(QStringLiteral("на карте нет обязательных Призов"));
-    if (crystalCount < 6 || crystalCount > 8)
-        return fail(QStringLiteral("количество Кристаллов должно быть от 6 до 8"));
+    if (crystalCount != 20)
+        return fail(QStringLiteral("на карте должно быть ровно 20 Кристаллов"));
     if (superPrizeCount > 1)
         return fail(QStringLiteral("на карте больше одного Суперприза"));
     if (exitCount < 1)

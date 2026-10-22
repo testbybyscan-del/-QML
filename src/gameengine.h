@@ -5,6 +5,7 @@
 #include <QAbstractListModel>
 #include <QHash>
 #include <QTimer>
+#include <QVariantList>
 #include <QVector>
 #include <QQmlEngine>
 
@@ -139,6 +140,7 @@ public:
     Q_INVOKABLE void dig();
     Q_INVOKABLE void updateGame();
     Q_INVOKABLE void updateCrystals();
+    Q_INVOKABLE void initializeLevels(const QVariantList &authoredLevels);
 
 signals:
     void playerPositionChanged();

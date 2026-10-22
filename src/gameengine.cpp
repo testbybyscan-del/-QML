@@ -3,72 +3,69 @@
 #include <QtMath>
 #include <QDebug>
 
-// Легенда уровня:
-//  '#' кирпич, 'H' лестница, '-' верёвка, '$' золото,
-//  'P' старт игрока, 'E' враг, 'X' вход/выход,
-//  'x' защищённая клетка подхода к нему, '.' пусто
-static const QVector<QString> kLevel1 = {
-    "####################",
-    "#..$....#$#.....$..#",
-    "#.......#C#........#",
-    "#.......#C#........#",
-    "#..$....#C#.....$..#",
-    "#....####C####.....#",
-    "#.......#C#........#",
-    "#.......#C#........#",
-    "#.......#C#........#",
-    "#....####C####.....#",
-    "#.......#C#........#",
-    "#..P..$........$.xX#",
-    "####################"
-};
-
-// В нижней части уровня открыт боковой проход к призам (столбец 14).
-// Каждый предусмотренный для толкания кристалл имеет доступную клетку назначения.
-static const QVector<QString> kLevel2 = {
-    "####################",
-    "#..$....#.#....$...#",
-    "#..###..#.#...###..#",
-    "#....#...C...#.....#",
-    "#...####.#.####.$..#",
-    "#.###...#.#....###.#",
-    "#..$..C.....#...$..#",
-    "#...###......###...#",
-    "#....#.............#",
-    "#..#####...###.#...#",
-    "#.$...#.....#..$$$.#",
-    "#XxP..........$C.xX#",
-    "####################"
-};
-
-// На старте есть длинный свободный коридор: персонаж может выбрать направление,
-// пройти к участкам с кирпичами и копать ради призов. Кристаллы не стоят
-// непосредственно над стартом и не запирают игрока при появлении на уровне.
-static const QVector<QString> kLevel3 = {
-    "####################",
-    "##..###....###...#.#",
-    "#...#..C..C..#.....#",
-    "#.###..C..#..###...#",
-    "#...#..#...$..#....#",
-    "##..###.#.###..##..#",
-    "#...#..C.C..#......#",
-    "#.#.#..#.#..#.#....#",
-    "#...###...###...##.#",
-    "#..$....C....$.....#",
-    "#.####..#...###..#.#",
-    "#Xx........P#$..$xX#",
-    "####################"
-};
-
-// Общая логика загрузки, снимков и переходов применяется к любому уровню списка.
-static const QVector<QVector<QString>> kLevels = {kLevel1, kLevel2, kLevel3};
-
 GameEngine::GameEngine(QObject *parent) : QObject(parent)
 {
-    // Ручные карты остаются эталонными уровнями, а генератор добавляет
-    // отдельную карту в тот же список и использует общую загрузку уровня.
-    m_levels = kLevels;
+}
+
+void GameEngine::initializeLevels(const QVariantList &authoredLevels)
+{
+    QVector<QVector<QString>> levels;
+    levels.reserve(authoredLevels.size());
+
+    for (const QVariant &levelValue : authoredLevels) {
+        const QVariantList rows = levelValue.toList();
+        if (rows.isEmpty()) {
+            qWarning() << "Авторский QML-уровень не содержит строк";
+            return;
+        }
+
+        QVector<QString> levelRows;
+        levelRows.reserve(rows.size());
+        int expectedWidth = -1;
+        int playerCount = 0;
+        int exitCount = 0;
+        for (const QVariant &rowValue : rows) {
+            const QString row = rowValue.toString();
+            if (row.isEmpty() || (expectedWidth >= 0 && row.size() != expectedWidth)) {
+                qWarning() << "Строки авторского QML-уровня должны иметь"
+                              " одинаковую ненулевую ширину";
+                return;
+            }
+            const QString validTiles = QStringLiteral("#.$PXCxSH-E");
+            for (QChar tile : row) {
+                if (!validTiles.contains(tile)) {
+                    qWarning() << "Неизвестный символ карты в QML-уровне:" << tile;
+                    return;
+                }
+            }
+            expectedWidth = row.size();
+            playerCount += row.count(QLatin1Char('P'));
+            exitCount += row.count(QLatin1Char('X'));
+            levelRows.append(row);
+        }
+        if (playerCount != 1) {
+            qWarning() << "В каждом авторском QML-уровне должна быть ровно"
+                          " одна стартовая позиция P";
+            return;
+        }
+        if (exitCount == 0) {
+            qWarning() << "В каждом авторском QML-уровне должен быть хотя бы один выход X";
+            return;
+        }
+        levels.append(levelRows);
+    }
+
+    if (levels.isEmpty()) {
+        qWarning() << "GameEngine получил пустой список авторских QML-уровней";
+        return;
+    }
+
+    // Ручные QML-карты передаются первыми. Сгенерированные уровни затем
+    // добавляются в этот же список и используют общую загрузку и снимки.
+    m_levels = levels;
+    m_levelSnapshots.clear();
     m_levelSnapshots.resize(m_levels.size());
+    m_currentLevel = 1;
     loadLevel();
 }
 

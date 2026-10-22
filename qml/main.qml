@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Window 2.15
 import "components"
+import "levels" as Levels
 import BoulderDash 1.0
 
 Window {
@@ -14,6 +15,10 @@ Window {
     color: "#111827"
 
     readonly property int tileSize: 32
+
+    Levels.Level1 { id: level1 }
+    Levels.Level2 { id: level2 }
+    Levels.Level3 { id: level3 }
 
     GameEngine {
         id: gameEngine
@@ -156,7 +161,10 @@ Window {
             }
         }
 
-        Component.onCompleted: forceActiveFocus()
+        Component.onCompleted: {
+            gameEngine.initializeLevels([level1.rows, level2.rows, level3.rows])
+            forceActiveFocus()
+        }
         onActiveFocusChanged: if (activeFocus) forceActiveFocus()
     }
 }
