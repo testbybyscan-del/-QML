@@ -19,6 +19,7 @@ Window {
     Levels.Level1 { id: level1 }
     Levels.Level2 { id: level2 }
     Levels.Level3 { id: level3 }
+    Levels.Level4 { id: level4 }
 
     GameEngine {
         id: gameEngine
@@ -80,8 +81,9 @@ Window {
 
                 Text {
                     width: parent.width / 2
-                    text: gameEngine.currentLevel >= 4
-                          ? qsTr("ПЕЙЗАЖ %1").arg(gameEngine.currentLevel)
+                    text: gameEngine.currentLevel > gameEngine.authoredLevelCount
+                          ? qsTr("ПЕЙЗАЖ %1").arg(
+                                gameEngine.currentLevel - gameEngine.authoredLevelCount)
                           : qsTr("BOULDER DASH — УРОВЕНЬ %1").arg(gameEngine.currentLevel)
                     color: "#f3f4f6"
                     font.pixelSize: 22
@@ -120,7 +122,9 @@ Window {
                         crystalColor: gameEngine.currentLevel === 2
                                       ? "#db4f9b"
                                       : gameEngine.currentLevel === 3 ? "#38bdf8"
-                                      : gameEngine.currentLevel >= 4 ? "#c084fc" : "#35d6c4"
+                                      : gameEngine.currentLevel === 4 ? "#f59e0b"
+                                      : gameEngine.currentLevel > gameEngine.authoredLevelCount
+                                        ? "#c084fc" : "#35d6c4"
                     }
                 }
 
@@ -162,7 +166,9 @@ Window {
         }
 
         Component.onCompleted: {
-            gameEngine.initializeLevels([level1.rows, level2.rows, level3.rows])
+            gameEngine.initializeLevels([
+                level1.rows, level2.rows, level3.rows, level4.rows
+            ])
             forceActiveFocus()
         }
         onActiveFocusChanged: if (activeFocus) forceActiveFocus()

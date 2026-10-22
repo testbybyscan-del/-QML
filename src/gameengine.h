@@ -105,6 +105,7 @@ class GameEngine : public QObject
     Q_PROPERTY(int columns READ columns NOTIFY levelChanged)
     Q_PROPERTY(int rows READ rows NOTIFY levelChanged)
     Q_PROPERTY(int currentLevel READ currentLevel NOTIFY levelChanged)
+    Q_PROPERTY(int authoredLevelCount READ authoredLevelCount NOTIFY levelChanged)
     Q_PROPERTY(int playerX READ playerX NOTIFY playerPositionChanged)
     Q_PROPERTY(int playerY READ playerY NOTIFY playerPositionChanged)
     Q_PROPERTY(QString playerState READ playerState NOTIFY playerStateChanged)
@@ -123,6 +124,7 @@ public:
     int columns() const { return m_columns; }
     int rows() const { return m_rows; }
     int currentLevel() const { return m_currentLevel; }
+    int authoredLevelCount() const { return m_authoredLevelCount; }
     int playerX() const { return m_playerX; }
     int playerY() const { return m_playerY; }
     QString playerState() const { return m_playerState; }
@@ -170,6 +172,7 @@ private:
     int m_columns = 0;
     int m_rows = 0;
     int m_currentLevel = 1;
+    int m_authoredLevelCount = 0;
     int m_landscapeSeed = 0;
     int m_playerX = 0;
     int m_playerY = 0;

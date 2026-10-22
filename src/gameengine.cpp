@@ -63,6 +63,7 @@ void GameEngine::initializeLevels(const QVariantList &authoredLevels)
     // Ручные QML-карты передаются первыми. Сгенерированные уровни затем
     // добавляются в этот же список и используют общую загрузку и снимки.
     m_levels = levels;
+    m_authoredLevelCount = levels.size();
     m_levelSnapshots.clear();
     m_levelSnapshots.resize(m_levels.size());
     m_currentLevel = 1;
