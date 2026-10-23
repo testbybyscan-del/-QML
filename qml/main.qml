@@ -15,6 +15,13 @@ Window {
     color: "#111827"
 
     readonly property int tileSize: 32
+    readonly property string messageFontFamily: zxSpectrumFont.status === FontLoader.Ready
+                                                ? zxSpectrumFont.name : "monospace"
+
+    FontLoader {
+        id: zxSpectrumFont
+        source: "qrc:/fonts/Unifont.otf"
+    }
 
     Levels.Level1 { id: level1 }
     Levels.Level2 { id: level2 }
@@ -191,9 +198,11 @@ Window {
                         width: parent.width
                         text: qsTr("Игра приостановлена")
                         color: "#f8fafc"
-                        font.pixelSize: 30
+                        font.family: root.messageFontFamily
+                        font.pixelSize: 21
                         font.bold: true
                         horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
                     }
 
                     Text {
@@ -206,7 +215,8 @@ Window {
                               .arg(gameEngine.prizesLeft)
                               .arg(gameEngine.hasKey ? qsTr("есть") : qsTr("нет"))
                         color: "#e2e8f0"
-                        font.pixelSize: 17
+                        font.family: root.messageFontFamily
+                        font.pixelSize: 14
                         lineHeight: 1.25
                         horizontalAlignment: Text.AlignHCenter
                     }
@@ -221,7 +231,8 @@ Window {
                             anchors.centerIn: parent
                             text: qsTr("Перезапустить игру")
                             color: "white"
-                            font.pixelSize: 18
+                            font.family: root.messageFontFamily
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -244,7 +255,8 @@ Window {
                             anchors.centerIn: parent
                             text: qsTr("Закончить игру")
                             color: "#f8fafc"
-                            font.pixelSize: 17
+                            font.family: root.messageFontFamily
+                            font.pixelSize: 14
                         }
 
                         MouseArea {
@@ -267,8 +279,8 @@ Window {
 
             Rectangle {
                 anchors.centerIn: parent
-                width: Math.min(parent.width - 40, 410)
-                height: 220
+                width: Math.min(parent.width - 40, 430)
+                height: 260
                 radius: 14
                 color: "#1e293b"
                 border.color: "#facc15"
@@ -283,7 +295,8 @@ Window {
                         width: parent.width
                         text: qsTr("Для открытия Сейфа нужен Ключ")
                         color: "#f8fafc"
-                        font.pixelSize: 23
+                        font.family: root.messageFontFamily
+                        font.pixelSize: 16
                         font.bold: true
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
@@ -293,7 +306,8 @@ Window {
                         width: parent.width
                         text: qsTr("Найдите Ключ на четвёртом уровне и вернитесь к Сейфу.")
                         color: "#cbd5e1"
-                        font.pixelSize: 17
+                        font.family: root.messageFontFamily
+                        font.pixelSize: 14
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
                     }
@@ -308,7 +322,8 @@ Window {
                             anchors.centerIn: parent
                             text: qsTr("Понятно")
                             color: "#fff7ed"
-                            font.pixelSize: 18
+                            font.family: root.messageFontFamily
+                            font.pixelSize: 14
                             font.bold: true
                         }
 
@@ -318,6 +333,142 @@ Window {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: gameEngine.dismissKeyRequiredNotice()
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            visible: gameEngine.keyCollectedNotice && !gameEngine.gameOver
+            color: "#990f172a"
+            z: 102
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: Math.min(parent.width - 40, 430)
+                height: 250
+                radius: 14
+                color: "#1e293b"
+                border.color: "#34d399"
+                border.width: 2
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 24
+                    spacing: 18
+
+                    Text {
+                        width: parent.width
+                        text: qsTr("Ключ найден!")
+                        color: "#f8fafc"
+                        font.family: root.messageFontFamily
+                        font.pixelSize: 21
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: qsTr("Ключ у Персонажа. Вернитесь к Сейфу, чтобы открыть его.")
+                        color: "#cbd5e1"
+                        font.family: root.messageFontFamily
+                        font.pixelSize: 15
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 44
+                        radius: 8
+                        color: keyCollectedMouse.containsMouse ? "#047857" : "#065f46"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Продолжить")
+                            color: "#ecfdf5"
+                            font.family: root.messageFontFamily
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: keyCollectedMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: gameEngine.dismissKeyCollectedNotice()
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            visible: gameEngine.safeOpenedNotice && !gameEngine.gameOver
+            color: "#990f172a"
+            z: 103
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: Math.min(parent.width - 40, 430)
+                height: 250
+                radius: 14
+                color: "#1e293b"
+                border.color: "#facc15"
+                border.width: 2
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 24
+                    spacing: 18
+
+                    Text {
+                        width: parent.width
+                        text: qsTr("Сейф открыт!")
+                        color: "#f8fafc"
+                        font.family: root.messageFontFamily
+                        font.pixelSize: 21
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: qsTr("Ключ использован. За открытие начислено 100 очков.")
+                        color: "#cbd5e1"
+                        font.family: root.messageFontFamily
+                        font.pixelSize: 15
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 44
+                        radius: 8
+                        color: safeOpenedMouse.containsMouse ? "#b45309" : "#92400e"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Продолжить")
+                            color: "#fff7ed"
+                            font.family: root.messageFontFamily
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: safeOpenedMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: gameEngine.dismissSafeOpenedNotice()
                         }
                     }
                 }

@@ -119,6 +119,8 @@ class GameEngine : public QObject
     Q_PROPERTY(bool gameOver READ gameOver NOTIFY statusChanged)
     Q_PROPERTY(bool levelComplete READ levelComplete NOTIFY statusChanged)
     Q_PROPERTY(bool keyRequiredNotice READ keyRequiredNotice NOTIFY statusChanged)
+    Q_PROPERTY(bool keyCollectedNotice READ keyCollectedNotice NOTIFY statusChanged)
+    Q_PROPERTY(bool safeOpenedNotice READ safeOpenedNotice NOTIFY statusChanged)
     Q_PROPERTY(TileModel* tilesModel READ tilesModel CONSTANT)
     Q_PROPERTY(EnemyModel* enemiesModel READ enemiesModel CONSTANT)
 
@@ -141,6 +143,8 @@ public:
     bool gameOver() const { return m_gameOver; }
     bool levelComplete() const { return m_levelComplete; }
     bool keyRequiredNotice() const { return m_keyRequiredNotice; }
+    bool keyCollectedNotice() const { return m_keyCollectedNotice; }
+    bool safeOpenedNotice() const { return m_safeOpenedNotice; }
 
     TileModel* tilesModel() { return &m_tilesModel; }
     EnemyModel* enemiesModel() { return &m_enemiesModel; }
@@ -152,6 +156,8 @@ public:
     Q_INVOKABLE void initializeLevels(const QVariantList &authoredLevels);
     Q_INVOKABLE void restartGame();
     Q_INVOKABLE void dismissKeyRequiredNotice();
+    Q_INVOKABLE void dismissKeyCollectedNotice();
+    Q_INVOKABLE void dismissSafeOpenedNotice();
 
 signals:
     void playerPositionChanged();
@@ -166,12 +172,15 @@ private:
         QVector<QString> grid;
         int playerX = 0;
         int playerY = 0;
+        QHash<int, int> bonusPrizeRestoreOrigins;
+        QHash<int, int> pendingBonusBrickRestores;
         bool valid = false;
     };
 
     void loadLevel();
     void addScore(int points);
     void loseLife();
+    bool hasActiveNotice() const;
     bool isAdjacentToLockedSafe(int row, int col) const;
     void generateNextLandscape();
     void saveCurrentLevel();
@@ -197,9 +206,14 @@ private:
     bool m_gameOver = false;
     bool m_levelComplete = false;
     bool m_keyRequiredNotice = false;
+    bool m_keyCollectedNotice = false;
+    bool m_safeOpenedNotice = false;
+    bool m_keyNoticeShownForVisit = false;
     bool m_nearLockedSafe = false;
     bool m_playerMovedSinceCrystalUpdate = false;
     QSet<int> m_fallingCrystalCells;
+    QHash<int, int> m_bonusPrizeRestoreOrigins;
+    QHash<int, int> m_pendingBonusBrickRestores;
 
     QVector<QString> m_grid; // каждый QString — строка уровня
     QVector<QVector<QString>> m_levels;

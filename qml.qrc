@@ -4,6 +4,8 @@
         <file alias="components/Tile.qml">qml/components/Tile.qml</file>
         <file alias="components/Player.qml">qml/components/Player.qml</file>
         <file alias="components/Enemy.qml">qml/components/Enemy.qml</file>
+        <file alias="fonts/Unifont.otf">qml/fonts/Unifont.otf</file>
+        <file alias="fonts/UNIFONT-LICENSE.txt">qml/fonts/UNIFONT-LICENSE.txt</file>
         <file alias="levels/Level1.qml">qml/levels/Level1.qml</file>
         <file alias="levels/Level2.qml">qml/levels/Level2.qml</file>
         <file alias="levels/Level3.qml">qml/levels/Level3.qml</file>

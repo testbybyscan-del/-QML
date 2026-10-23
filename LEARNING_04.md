@@ -22,11 +22,15 @@ Qt Test выполняет проверки. CTest помогает запуск
 | Тест | Игровое правило |
 |---|---|
 | `collectingPrizeUpdatesScoreAndUnlocksExit` | Обычный Приз добавляет 100 очков, уменьшает счётчик и открывает выход. |
-| `collectingKeyEmitsPropertyChange` | Подбор Ключа устанавливает `hasKey` и отправляет `hasKeyChanged`. |
+| `collectingPrizeOnActualFirstLevelUpdatesScoreAndHud` | Сбор Приза с настоящей карты первого уровня обновляет счёт и посылает сигнал HUD. |
+| `collectingKeyAndOpeningSafeShowsNotices` | Подбор Ключа и открытие Сейфа обновляют состояние и показывают отдельные сообщения. |
 | `approachingLockedSafeShowsNotice` | При соседстве с запертым Сейфом появляется предупреждение; войти в Сейф без Ключа нельзя. |
 | `remainingPrizeBlocksExit` | Выход не переводит на следующий уровень, пока остаётся обязательный Приз. |
 | `fallingCrystalKillsStationaryPlayer` | Падающий Кристалл убивает Персонажа, который остался под ним. |
 | `stationaryCrystalDirectlyAbovePlayerIsNotLethal` | Неподвижный Кристалл непосредственно над Персонажем не считается падающим. |
+| `crystalFallingIntoDugBrickBecomesBonusPrize` | Если Кристалл остаётся в яме благодаря опоре снизу, он превращается в необязательный Приз и начисляет очки при сборе. |
+| `bonusPrizeRestoresBrickAndAllowsRepeatedDigging` | После сбора дополнительного Приза и выхода из клетки исходный Кирпич восстанавливается, позволяя повторить цикл с новым Кристаллом. |
+| `levelFiveCrystalFallsThroughDugBrickIfBelowIsEmpty` | На карте QML пятого уровня проверяется, что Кристалл продолжает падать сквозь яму при свободной клетке ниже. |
 | `authoredLevelsThreeAndFourHaveRequiredPrizes` | Уровни 3 и 4 загружаются из QML-ресурсов, а счётчик движка соответствует символам `$` на карте. |
 
 ## Разберём один тест
