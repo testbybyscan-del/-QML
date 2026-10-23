@@ -4,7 +4,7 @@
 
 Исполняемый файл называется `boulderdash`, а C++-тип `GameEngine` регистрируется в QML под URI `BoulderDash`.
 
-> Этот README содержит обзор проекта и справочные заметки. Пошаговые материалы для самостоятельной разработки собраны отдельно: [`LEARNING_01.md`](LEARNING_01.md) → [`LEARNING_02.md`](LEARNING_02.md) → [`LEARNING_03.md`](LEARNING_03.md) → [`LEARNING_04.md`](LEARNING_04.md).
+> Этот README содержит обзор проекта и справочные заметки. Пошаговые материалы для самостоятельной разработки собраны отдельно: [`LEARNING_01.md`](LEARNING_01.md) → [`LEARNING_02.md`](LEARNING_02.md) → [`LEARNING_03.md`](LEARNING_03.md) → [`LEARNING_04.md`](LEARNING_04.md) → [`LEARNING_05.md`](LEARNING_05.md).
 
 ---
 
@@ -135,11 +135,14 @@ cmake -S . -B build-qt5 -G Ninja -DCMAKE_PREFIX_PATH=/opt/Qt/5.15.2/gcc_64
 ├── LEARNING_02.md              # Учебная часть 2
 ├── LEARNING_03.md              # Руководство по генератору
 ├── LEARNING_04.md              # Qt Test и CTest для логики игры
+├── LEARNING_05.md              # Связь игрового состояния C++ с интерфейсом QML
 ├── src/
 │   ├── gameengine.h/.cpp       # Игровое состояние, модели и игровые правила
 │   └── landscapegenerator.h/.cpp # Создание и валидация новых пейзажей
 ├── tests/
 │   └── test_gameengine.cpp     # Автоматические проверки правил движка
+├── assets/
+│   └── tilesets/                # Лицензированные наборы PNG для QML-тайлов
 └── qml/
     ├── main.qml                # Окно, ввод, HUD, игровое поле и таймер физики
     ├── levels/                 # Ручные уровни в отдельных QML-файлах
