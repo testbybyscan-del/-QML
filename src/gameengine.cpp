@@ -2,9 +2,26 @@
 #include "landscapegenerator.h"
 #include <QtMath>
 #include <QDebug>
+#include <QSettings>
 
 GameEngine::GameEngine(QObject *parent) : QObject(parent)
 {
+    QSettings settings;
+    m_highScore = qMax(0, settings.value(QStringLiteral("highScore"), 0).toInt());
+}
+
+void GameEngine::addScore(int points)
+{
+    if (points <= 0)
+        return;
+
+    m_score += points;
+    if (m_score > m_highScore) {
+        m_highScore = m_score;
+        QSettings settings;
+        settings.setValue(QStringLiteral("highScore"), m_highScore);
+    }
+    emit scoreChanged();
 }
 
 void GameEngine::initializeLevels(const QVariantList &authoredLevels)
@@ -238,9 +255,8 @@ void GameEngine::movePlayer(int dx, int dy)
         if (tileAt(ny, nx) == '$') {
             setTileAt(ny, nx, '.');
             m_tilesModel.updateTile(ny, nx, "empty");
-            m_score += 100;
             --m_prizesLeft;
-            emit scoreChanged();
+            addScore(100);
             if (m_prizesLeft == 0) {
                 // Сбор наград открывает возможность продолжить, но сам по себе
                 // не покидает экран: переход совершается только у правого выхода.
@@ -254,8 +270,7 @@ void GameEngine::movePlayer(int dx, int dy)
         if (tileAt(ny, nx) == 'S') {
             setTileAt(ny, nx, '.');
             m_tilesModel.updateTile(ny, nx, "empty");
-            m_score += 25;
-            emit scoreChanged();
+            addScore(25);
         }
 
         // Ключ переносится между экранами: его символ удаляется с карты,
@@ -273,8 +288,7 @@ void GameEngine::movePlayer(int dx, int dy)
             setTileAt(ny, nx, '.');
             m_tilesModel.updateTile(ny, nx, "empty");
             m_hasKey = false;
-            m_score += 100;
-            emit scoreChanged();
+            addScore(100);
             emit statusChanged();
         }
 

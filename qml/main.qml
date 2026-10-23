@@ -93,9 +93,10 @@ Window {
 
                 Text {
                     width: parent.width / 2
-                    text: qsTr("Призы: %1   Очки: %2   Жизни: %3   Ключ: %4")
+                    text: qsTr("Призы: %1   Очки: %2   Рекорд: %3   Жизни: %4   Ключ: %5")
                           .arg(gameEngine.prizesLeft)
                           .arg(gameEngine.score)
+                          .arg(gameEngine.highScore)
                           .arg(gameEngine.lives)
                           .arg(gameEngine.hasKey ? "есть" : "нет")
                     color: "#d1d5db"

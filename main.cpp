@@ -8,6 +8,8 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+    QCoreApplication::setOrganizationName(QStringLiteral("Majorov"));
+    QCoreApplication::setApplicationName(QStringLiteral("BoulderDash"));
     qmlRegisterType<GameEngine>("BoulderDash", 1, 0, "GameEngine");
     QQmlApplicationEngine engine;
     const QUrl url(QStringLiteral("qrc:/main.qml"));

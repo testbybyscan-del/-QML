@@ -111,6 +111,7 @@ class GameEngine : public QObject
     Q_PROPERTY(QString playerState READ playerState NOTIFY playerStateChanged)
     Q_PROPERTY(bool playerFacingRight READ playerFacingRight NOTIFY playerStateChanged)
     Q_PROPERTY(int score READ score NOTIFY scoreChanged)
+    Q_PROPERTY(int highScore READ highScore NOTIFY scoreChanged)
     Q_PROPERTY(int prizesLeft READ prizesLeft NOTIFY scoreChanged)
     Q_PROPERTY(int lives READ lives NOTIFY scoreChanged)
     Q_PROPERTY(bool hasKey READ hasKey NOTIFY statusChanged)
@@ -131,6 +132,7 @@ public:
     QString playerState() const { return m_playerState; }
     bool playerFacingRight() const { return m_playerFacingRight; }
     int score() const { return m_score; }
+    int highScore() const { return m_highScore; }
     int prizesLeft() const { return m_prizesLeft; }
     int lives() const { return m_lives; }
     bool hasKey() const { return m_hasKey; }
@@ -164,6 +166,7 @@ private:
     };
 
     void loadLevel();
+    void addScore(int points);
     void generateNextLandscape();
     void saveCurrentLevel();
     void switchToLevel(int targetLevel);
@@ -181,6 +184,7 @@ private:
     QString m_playerState = "idle";
     bool m_playerFacingRight = true;
     int m_score = 0;
+    int m_highScore = 0;
     int m_prizesLeft = 0;
     int m_lives = 3;
     bool m_hasKey = false;
