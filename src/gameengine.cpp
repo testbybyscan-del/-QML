@@ -125,8 +125,7 @@ void GameEngine::restartGame()
     m_playerFacingRight = true;
     m_playerMovedSinceCrystalUpdate = false;
     m_fallingCrystalCells.clear();
-    m_bonusPrizeRestoreOrigins.clear();
-    m_pendingBonusBrickRestores.clear();
+    m_pitPrizeDugCellByPosition.clear();
     loadLevel();
 }
 
@@ -180,11 +179,9 @@ void GameEngine::loadLevel()
     if (restoringSnapshot) {
         m_playerX = snapshot.playerX;
         m_playerY = snapshot.playerY;
-        m_bonusPrizeRestoreOrigins = snapshot.bonusPrizeRestoreOrigins;
-        m_pendingBonusBrickRestores = snapshot.pendingBonusBrickRestores;
+        m_pitPrizeDugCellByPosition = snapshot.pitPrizeDugCellByPosition;
     } else {
-        m_bonusPrizeRestoreOrigins.clear();
-        m_pendingBonusBrickRestores.clear();
+        m_pitPrizeDugCellByPosition.clear();
     }
     m_prizesLeft = 0;
     m_fallingCrystalCells.clear();
@@ -209,6 +206,7 @@ void GameEngine::loadLevel()
                 ++m_prizesLeft;
                 break;
             case 'S': type = "superPrize"; break;
+            case '*': type = "bonusPrize"; break;
             case 'P':
                 if (!restoringSnapshot) {
                     m_playerX = c;
@@ -257,6 +255,9 @@ void GameEngine::setTileAt(int row, int col, QChar ch)
 
 bool GameEngine::playerCanEnter(int row, int col) const
 {
+    if (row < 0 || row >= m_rows || col < 0 || col >= m_columns)
+        return false;
+
     QChar ch = tileAt(row, col);
     if (ch == QLatin1Char('B') && !m_hasKey)
         return false;
@@ -350,29 +351,33 @@ void GameEngine::movePlayer(int dx, int dy)
     }
 
     if (playerCanEnter(ny, nx)) {
-        const int previousX = m_playerX;
-        const int previousY = m_playerY;
-        const int previousCellKey = previousY * m_columns + previousX;
         m_playerX = nx;
         m_playerY = ny;
         m_playerMovedSinceCrystalUpdate = true;
 
         // Обычный Приз участвует в условии перехода, дополнительный Приз — нет.
         const QChar collectedTile = tileAt(ny, nx);
+        const int destinationCellKey = ny * m_columns + nx;
         if (collectedTile == '$' || collectedTile == '*') {
+            int dugCellKey = -1;
             if (collectedTile == '*') {
-                const int prizeCellKey = ny * m_columns + nx;
-                auto restoreOrigin = m_bonusPrizeRestoreOrigins.find(prizeCellKey);
-                if (restoreOrigin != m_bonusPrizeRestoreOrigins.end()) {
-                    m_pendingBonusBrickRestores.insert(prizeCellKey, restoreOrigin.value());
-                    m_bonusPrizeRestoreOrigins.erase(restoreOrigin);
+                auto pitCell = m_pitPrizeDugCellByPosition.find(destinationCellKey);
+                if (pitCell != m_pitPrizeDugCellByPosition.end()) {
+                    dugCellKey = pitCell.value();
+                    m_pitPrizeDugCellByPosition.erase(pitCell);
                 }
             }
             setTileAt(ny, nx, '.');
-            m_tilesModel.updateTile(ny, nx, "empty");
+            m_tilesModel.updateTile(ny, nx, dugCellKey >= 0 ? "dug" : "empty");
             if (collectedTile == '$')
                 --m_prizesLeft;
             addScore(100);
+            if (dugCellKey >= 0) {
+                const int dugRow = dugCellKey / m_columns;
+                const int dugColumn = dugCellKey % m_columns;
+                m_tilesModel.updateTile(dugRow, dugColumn, "dug");
+                startDugTileTimer(dugCellKey / m_columns, dugCellKey % m_columns);
+            }
             if (collectedTile == '$' && m_prizesLeft == 0) {
                 // Сбор наград открывает возможность продолжить, но сам по себе
                 // не покидает экран: переход совершается только у правого выхода.
@@ -427,18 +432,6 @@ void GameEngine::movePlayer(int dx, int dy)
         }
         m_nearLockedSafe = nowNearLockedSafe;
 
-        auto pendingRestore = m_pendingBonusBrickRestores.find(previousCellKey);
-        if (pendingRestore != m_pendingBonusBrickRestores.end()) {
-            const int brickCellKey = pendingRestore.value();
-            m_pendingBonusBrickRestores.erase(pendingRestore);
-            const int brickRow = brickCellKey / m_columns;
-            const int brickColumn = brickCellKey % m_columns;
-            if (tileAt(brickRow, brickColumn) == '.') {
-                setTileAt(brickRow, brickColumn, '#');
-                m_tilesModel.updateTile(brickRow, brickColumn, "brick");
-            }
-        }
-
         if (dy < 0) m_playerState = "climb";
         else if (dx != 0) m_playerState = "run";
         else m_playerState = "idle";
@@ -468,8 +461,7 @@ void GameEngine::saveCurrentLevel()
     snapshot.grid = m_grid;
     snapshot.playerX = m_playerX;
     snapshot.playerY = m_playerY;
-    snapshot.bonusPrizeRestoreOrigins = m_bonusPrizeRestoreOrigins;
-    snapshot.pendingBonusBrickRestores = m_pendingBonusBrickRestores;
+    snapshot.pitPrizeDugCellByPosition = m_pitPrizeDugCellByPosition;
     snapshot.valid = true;
 }
 
@@ -483,6 +475,48 @@ void GameEngine::switchToLevel(int targetLevel)
     m_currentLevel = targetLevel;
     m_playerState = "idle";
     loadLevel();
+}
+
+void GameEngine::startDugTileTimer(int row, int col)
+{
+    const int tileKey = row * m_columns + col;
+    auto existingTimer = m_dugTileTimers.find(tileKey);
+    if (existingTimer != m_dugTileTimers.end()) {
+        existingTimer.value()->stop();
+        existingTimer.value()->deleteLater();
+        m_dugTileTimers.erase(existingTimer);
+    }
+
+    auto *timer = new QTimer(this);
+    timer->setSingleShot(true);
+    m_dugTileTimers.insert(tileKey, timer);
+    connect(timer, &QTimer::timeout, this, [this, row, col, tileKey, timer]() {
+        m_dugTileTimers.remove(tileKey);
+        if (m_gameOver) {
+            timer->deleteLater();
+            return;
+        }
+        if (hasActiveNotice()) {
+            m_dugTileTimers.insert(tileKey, timer);
+            timer->start(100);
+            return;
+        }
+        if (tileAt(row, col) == '.') {
+            setTileAt(row, col, '#');
+            m_tilesModel.updateTile(row, col, "brick");
+            if (m_playerX == col && m_playerY == row)
+                loseLife();
+        } else if (tileAt(row, col) == 'C') {
+            // Оставшийся в яме Кристалл становится Призом. Захват Приза
+            // запустит новый полный таймер восстановления Кирпича.
+            setTileAt(row, col, '*');
+            m_pitPrizeDugCellByPosition.insert(tileKey, tileKey);
+            m_fallingCrystalCells.remove(tileKey);
+            m_tilesModel.updateTile(row, col, "bonusPrize");
+        }
+        timer->deleteLater();
+    });
+    timer->start(15000);
 }
 
 void GameEngine::dig()
@@ -502,37 +536,7 @@ void GameEngine::dig()
         setTileAt(by, bx, '.');
         m_tilesModel.updateTile(by, bx, "dug");
 
-        const int tileKey = by * m_columns + bx;
-        auto *timer = new QTimer(this);
-        timer->setSingleShot(true);
-        m_dugTileTimers.insert(tileKey, timer);
-        connect(timer, &QTimer::timeout, this, [this, by, bx, tileKey, timer]() {
-            m_dugTileTimers.remove(tileKey);
-            if (m_gameOver) {
-                timer->deleteLater();
-                return;
-            }
-            if (hasActiveNotice()) {
-                m_dugTileTimers.insert(tileKey, timer);
-                timer->start(100);
-                return;
-            }
-            if (tileAt(by, bx) == '.') {
-                setTileAt(by, bx, '#');
-                m_tilesModel.updateTile(by, bx, "brick");
-                if (m_playerX == bx && m_playerY == by)
-                    loseLife();
-            } else if (tileAt(by, bx) == 'C') {
-                // Кристалл, застрявший в яме к моменту восстановления, становится
-                // дополнительным Призом и не входит в обязательный счётчик.
-                setTileAt(by, bx, '*');
-                m_bonusPrizeRestoreOrigins.insert(tileKey, tileKey);
-                m_fallingCrystalCells.remove(tileKey);
-                m_tilesModel.updateTile(by, bx, "bonusPrize");
-            }
-            timer->deleteLater();
-        });
-        timer->start(15000);
+        startDugTileTimer(by, bx);
 
         // Освобождённая клетка сразу участвует в симуляции:
         // предмет над ней начинает падать в этом же действии копания.
@@ -569,17 +573,17 @@ void GameEngine::updateCrystals()
         if (gem == 'C')
             m_fallingCrystalCells.insert(cellKey(toRow, toCol));
     };
-    const auto moveBonusRestoreOrigin = [this, &cellKey](int fromRow, int fromCol,
-                                                          int toRow, int toCol, QChar gem) {
+    const auto movePitPrizeOrigin = [this, &cellKey](int fromRow, int fromCol,
+                                                     int toRow, int toCol, QChar gem) {
         if (gem != '*')
             return;
         const int fromKey = cellKey(fromRow, fromCol);
-        auto restoreOrigin = m_bonusPrizeRestoreOrigins.find(fromKey);
-        if (restoreOrigin == m_bonusPrizeRestoreOrigins.end())
+        auto pitCell = m_pitPrizeDugCellByPosition.find(fromKey);
+        if (pitCell == m_pitPrizeDugCellByPosition.end())
             return;
-        const int brickKey = restoreOrigin.value();
-        m_bonusPrizeRestoreOrigins.erase(restoreOrigin);
-        m_bonusPrizeRestoreOrigins.insert(cellKey(toRow, toCol), brickKey);
+        const int dugCellKey = pitCell.value();
+        m_pitPrizeDugCellByPosition.erase(pitCell);
+        m_pitPrizeDugCellByPosition.insert(cellKey(toRow, toCol), dugCellKey);
     };
     // Dug tiles are traversable. The player's cell remains an obstacle to object
     // movement; lethal contact is checked only for a falling Crystal with a gap.
@@ -620,7 +624,7 @@ void GameEngine::updateCrystals()
                     const int destinationRow = sourceRow + 1;
                     const QChar shiftedGem = tileAt(sourceRow, col);
                     moveFallingState(sourceRow, col, destinationRow, col, shiftedGem);
-                    moveBonusRestoreOrigin(sourceRow, col, destinationRow, col, shiftedGem);
+                    movePitPrizeOrigin(sourceRow, col, destinationRow, col, shiftedGem);
                     setTileAt(destinationRow, col, shiftedGem);
                     setTileAt(sourceRow, col, '.');
                     m_tilesModel.updateTile(destinationRow, col, gemType(shiftedGem));
@@ -640,7 +644,7 @@ void GameEngine::updateCrystals()
                 setTileAt(row, col, '.');
                 setTileAt(row + 1, col, fallingGem);
                 moveFallingState(row, col, row + 1, col, fallingGem);
-                moveBonusRestoreOrigin(row, col, row + 1, col, fallingGem);
+                movePitPrizeOrigin(row, col, row + 1, col, fallingGem);
                 m_tilesModel.updateTile(row, col, "empty");
                 m_tilesModel.updateTile(row + 1, col, gemType(fallingGem));
                 return;
@@ -669,8 +673,8 @@ void GameEngine::updateCrystals()
 
             const QChar upperGem = tileAt(row, col);
             const QChar tumblingGem = tileAt(row + 1, col);
-            moveBonusRestoreOrigin(row + 1, col, row + 1, col + tumbleDirection, tumblingGem);
-            moveBonusRestoreOrigin(row, col, row + 1, col, upperGem);
+            movePitPrizeOrigin(row + 1, col, row + 1, col + tumbleDirection, tumblingGem);
+            movePitPrizeOrigin(row, col, row + 1, col, upperGem);
             m_fallingCrystalCells.remove(cellKey(row, col));
             m_fallingCrystalCells.remove(cellKey(row + 1, col));
             if (upperGem == 'C')
@@ -688,7 +692,7 @@ void GameEngine::updateCrystals()
                 const int destinationRow = sourceRow + 1;
                 const QChar shiftedGem = tileAt(sourceRow, col);
                 moveFallingState(sourceRow, col, destinationRow, col, shiftedGem);
-                moveBonusRestoreOrigin(sourceRow, col, destinationRow, col, shiftedGem);
+                movePitPrizeOrigin(sourceRow, col, destinationRow, col, shiftedGem);
                 setTileAt(destinationRow, col, shiftedGem);
                 setTileAt(sourceRow, col, '.');
                 m_tilesModel.updateTile(destinationRow, col, gemType(shiftedGem));

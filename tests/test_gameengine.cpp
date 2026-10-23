@@ -290,11 +290,26 @@ private slots:
         dugTileTimers.first()->setInterval(1);
         QTRY_COMPARE(tileTypeAt(game, 4, 3), QStringLiteral("bonusPrize"));
         QCOMPARE(game.prizesLeft(), 0);
+        QVERIFY(!dugTileTimers.first()->isActive());
 
         game.movePlayer(0, 1);
         game.movePlayer(1, 0);
         QCOMPARE(game.score(), 100);
         QCOMPARE(game.prizesLeft(), 0);
+        QCOMPARE(tileTypeAt(game, 4, 3), QStringLiteral("dug"));
+        const QList<QTimer *> restartedTimers = game.findChildren<QTimer *>();
+        QTimer *restorationTimer = nullptr;
+        for (QTimer *timer : restartedTimers) {
+            if (timer->isActive()) {
+                restorationTimer = timer;
+                break;
+            }
+        }
+        QVERIFY(restorationTimer != nullptr);
+        QCOMPARE(restorationTimer->interval(), 15000);
+        game.movePlayer(-1, 0);
+        restorationTimer->setInterval(1);
+        QTRY_COMPARE(tileTypeAt(game, 4, 3), QStringLiteral("brick"));
     }
 
     void bonusPrizeRestoresBrickAndAllowsRepeatedDigging()
@@ -321,13 +336,21 @@ private slots:
             timer->setInterval(1);
             QTRY_COMPARE(tileTypeAt(game, 4, 3), QStringLiteral("bonusPrize"));
         };
+        auto waitForBrick = [&game, &activeDugTimer]() {
+            QTimer *timer = activeDugTimer();
+            QVERIFY(timer != nullptr);
+            timer->setInterval(1);
+            QTRY_COMPARE(tileTypeAt(game, 4, 3), QStringLiteral("brick"));
+        };
 
         game.dig();
         waitForBonusPrize();
         game.movePlayer(0, 1);
         game.movePlayer(1, 0);
         QCOMPARE(game.score(), 100);
-        game.movePlayer(-1, 0); // покидаем клетку Приза, Кирпич восстанавливается
+        QCOMPARE(tileTypeAt(game, 4, 3), QStringLiteral("dug"));
+        game.movePlayer(-1, 0);
+        waitForBrick(); // после сбора запускается полный таймер восстановления
         QCOMPARE(tileTypeAt(game, 4, 3), QStringLiteral("brick"));
 
         game.movePlayer(0, -1);
@@ -341,8 +364,68 @@ private slots:
         game.movePlayer(0, 1);
         game.movePlayer(1, 0);
         QCOMPARE(game.score(), 200);
+        QCOMPARE(tileTypeAt(game, 4, 3), QStringLiteral("dug"));
         game.movePlayer(-1, 0);
+        waitForBrick();
         QCOMPARE(tileTypeAt(game, 4, 3), QStringLiteral("brick"));
+    }
+
+    void levelOneCanRepeatCrystalPrizeBrickCycle()
+    {
+        QQmlEngine qmlEngine;
+        QStringList rows = loadQmlLevel(qmlEngine, QStringLiteral("qrc:/levels/Level1.qml"));
+        QVERIFY(!rows.isEmpty());
+        // Создаём два Кристалла над доступной ямой в нижней части реальной карты.
+        setCell(rows, 9, 4, QLatin1Char('C'));
+        setCell(rows, 10, 4, QLatin1Char('C'));
+        setCell(rows, 11, 4, QLatin1Char('#'));
+
+        GameEngine game;
+        initialize(game, rows);
+        const int requiredPrizes = game.prizesLeft();
+        auto activeDugTimer = [&game]() -> QTimer * {
+            for (QTimer *timer : game.findChildren<QTimer *>()) {
+                if (timer->isActive())
+                    return timer;
+            }
+            return nullptr;
+        };
+        auto waitForBonus = [&game, &activeDugTimer]() {
+            QTimer *timer = activeDugTimer();
+            QVERIFY(timer != nullptr);
+            timer->setInterval(1);
+            QTRY_COMPARE(tileTypeAt(game, 11, 4), QStringLiteral("bonusPrize"));
+        };
+        auto waitForBrick = [&game, &activeDugTimer]() {
+            QTimer *timer = activeDugTimer();
+            QVERIFY(timer != nullptr);
+            timer->setInterval(1);
+            QTRY_COMPARE(tileTypeAt(game, 11, 4), QStringLiteral("brick"));
+        };
+
+        game.movePlayer(0, -1); // клетка подхода над стартом
+        game.dig();
+        QCOMPARE(tileTypeAt(game, 11, 4), QStringLiteral("crystal"));
+        waitForBonus();
+
+        game.movePlayer(0, 1);
+        game.movePlayer(1, 0);
+        QCOMPARE(game.score(), 100);
+        QCOMPARE(tileTypeAt(game, 11, 4), QStringLiteral("dug"));
+        game.movePlayer(-1, 0);
+        waitForBrick();
+        QCOMPARE(tileTypeAt(game, 11, 4), QStringLiteral("brick"));
+
+        // Возвращаемся к той же клетке и копаем её повторно.
+        game.movePlayer(0, -1);
+        game.movePlayer(-1, 0);
+        game.movePlayer(1, 0);
+        game.dig();
+        game.updateCrystals();
+        QCOMPARE(tileTypeAt(game, 11, 4), QStringLiteral("crystal"));
+        waitForBonus();
+        QCOMPARE(game.score(), 100);
+        QCOMPARE(game.prizesLeft(), requiredPrizes);
     }
 
     void levelFiveCrystalFallsThroughDugBrickIfBelowIsEmpty()

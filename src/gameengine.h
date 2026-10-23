@@ -172,12 +172,12 @@ private:
         QVector<QString> grid;
         int playerX = 0;
         int playerY = 0;
-        QHash<int, int> bonusPrizeRestoreOrigins;
-        QHash<int, int> pendingBonusBrickRestores;
+        QHash<int, int> pitPrizeDugCellByPosition;
         bool valid = false;
     };
 
     void loadLevel();
+    void startDugTileTimer(int row, int col);
     void addScore(int points);
     void loseLife();
     bool hasActiveNotice() const;
@@ -212,8 +212,7 @@ private:
     bool m_nearLockedSafe = false;
     bool m_playerMovedSinceCrystalUpdate = false;
     QSet<int> m_fallingCrystalCells;
-    QHash<int, int> m_bonusPrizeRestoreOrigins;
-    QHash<int, int> m_pendingBonusBrickRestores;
+    QHash<int, int> m_pitPrizeDugCellByPosition;
 
     QVector<QString> m_grid; // каждый QString — строка уровня
     QVector<QVector<QString>> m_levels;

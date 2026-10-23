@@ -18,9 +18,9 @@ Item {
     Rectangle {
         anchors.fill: parent
         visible: tile.type === "brick" || tile.type === "dug"
-        color: tile.type === "brick" ? "#8b4513" : "#3a1f08"
-        border.color: tile.type === "brick" ? "#5a2d0c" : "transparent"
-        border.width: tile.type === "brick" ? 1 : 0
+        color: tile.type === "dug" ? "#3a1f08" : "#8b4513"
+        border.color: tile.type === "dug" ? "transparent" : "#5a2d0c"
+        border.width: tile.type === "dug" ? 0 : 1
 
         Rectangle {
             anchors.centerIn: parent
