@@ -340,7 +340,9 @@ void GameEngine::switchToLevel(int targetLevel)
 
 void GameEngine::dig()
 {
-    if (m_gameOver || m_levelComplete) return;
+    // Сбор всех обязательных Призов открывает выход, но не блокирует действия
+    // игрока на текущем уровне до фактического перехода.
+    if (m_gameOver) return;
 
     int dx = m_playerFacingRight ? 1 : -1;
     int bx = m_playerX + dx;
