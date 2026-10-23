@@ -93,6 +93,17 @@ Item {
                 }
             }
         }
+
+        Text {
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.margins: 2
+            text: "С"
+            color: "#f8fafc"
+            font.pixelSize: tile.size * 0.34
+            font.bold: true
+            z: 1
+        }
     }
 
     // Ключ собирается при входе в клетку и переносится между уровнями.
@@ -133,6 +144,17 @@ Item {
             width: parent.width * 0.1
             height: parent.height * 0.2
             color: "#facc15"
+        }
+
+        Text {
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.margins: 1
+            text: "К"
+            color: "#fff7cc"
+            font.pixelSize: tile.size * 0.34
+            font.bold: true
+            z: 1
         }
     }
 
@@ -180,6 +202,30 @@ Item {
                 width: 5
                 height: 5
                 color: "#fff8d6"
+            }
+        }
+    }
+
+    Item {
+        anchors.fill: parent
+        visible: tile.type === "bonusPrize"
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: parent.width * 0.58
+            height: parent.height * 0.58
+            rotation: 45
+            color: "#d97706"
+            border.color: "#fde68a"
+            border.width: 2
+
+            Text {
+                anchors.centerIn: parent
+                rotation: -45
+                text: "+"
+                color: "#fff7cc"
+                font.pixelSize: tile.size * 0.5
+                font.bold: true
             }
         }
     }

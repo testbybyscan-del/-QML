@@ -167,6 +167,7 @@ private:
 
     void loadLevel();
     void addScore(int points);
+    void loseLife();
     void generateNextLandscape();
     void saveCurrentLevel();
     void switchToLevel(int targetLevel);
@@ -190,6 +191,7 @@ private:
     bool m_hasKey = false;
     bool m_gameOver = false;
     bool m_levelComplete = false;
+    bool m_playerMovedSinceCrystalUpdate = false;
 
     QVector<QString> m_grid; // каждый QString — строка уровня
     QVector<QVector<QString>> m_levels;
