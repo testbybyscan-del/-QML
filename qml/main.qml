@@ -93,15 +93,16 @@ Window {
 
                 Text {
                     width: parent.width / 2
-                    text: qsTr("Призы: %1   Очки: %2   Рекорд: %3   Жизни: %4   Ключ: %5")
+                    text: qsTr("Призы: %1   Очки: %2\nРекорд: %3   Жизни: %4   Ключ: %5")
                           .arg(gameEngine.prizesLeft)
                           .arg(gameEngine.score)
                           .arg(gameEngine.highScore)
                           .arg(gameEngine.lives)
                           .arg(gameEngine.hasKey ? "есть" : "нет")
                     color: "#d1d5db"
-                    font.pixelSize: 18
+                    font.pixelSize: 15
                     horizontalAlignment: Text.AlignRight
+                    verticalAlignment: Text.AlignVCenter
                 }
             }
 
@@ -122,6 +123,9 @@ Window {
                         size: root.tileSize
                         type: model.type
                         hasKey: gameEngine.hasKey
+                        safeAlert: model.type === "safe" && !gameEngine.hasKey
+                                   && Math.abs(gameEngine.playerX - model.col)
+                                      + Math.abs(gameEngine.playerY - model.row) === 1
                         exitAvailable: gameEngine.prizesLeft === 0
                         crystalColor: gameEngine.currentLevel === 2
                                       ? "#db4f9b"
@@ -167,13 +171,156 @@ Window {
             anchors.fill: parent
             visible: gameEngine.gameOver
             color: "#b3000000"
+            z: 100
 
-            Text {
+            Rectangle {
                 anchors.centerIn: parent
-                color: "white"
-                font.pixelSize: 40
-                font.bold: true
-                text: qsTr("Игра окончена")
+                width: Math.min(parent.width - 40, 460)
+                height: 390
+                radius: 14
+                color: "#1e293b"
+                border.color: "#64748b"
+                border.width: 2
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 26
+                    spacing: 14
+
+                    Text {
+                        width: parent.width
+                        text: qsTr("Игра приостановлена")
+                        color: "#f8fafc"
+                        font.pixelSize: 30
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: qsTr("Очки: %1\nРекорд: %2\nОсталось жизней: %3\nУровень: %4\nОбязательных Призов осталось: %5\nКлюч: %6")
+                              .arg(gameEngine.score)
+                              .arg(gameEngine.highScore)
+                              .arg(gameEngine.lives)
+                              .arg(gameEngine.currentLevel)
+                              .arg(gameEngine.prizesLeft)
+                              .arg(gameEngine.hasKey ? qsTr("есть") : qsTr("нет"))
+                        color: "#e2e8f0"
+                        font.pixelSize: 17
+                        lineHeight: 1.25
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 46
+                        radius: 8
+                        color: restartMouse.containsMouse ? "#2563eb" : "#1d4ed8"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Перезапустить игру")
+                            color: "white"
+                            font.pixelSize: 18
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: restartMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: gameEngine.restartGame()
+                        }
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 42
+                        radius: 8
+                        color: finishMouse.containsMouse ? "#475569" : "#334155"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Закончить игру")
+                            color: "#f8fafc"
+                            font.pixelSize: 17
+                        }
+
+                        MouseArea {
+                            id: finishMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Qt.quit()
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            visible: gameEngine.keyRequiredNotice && !gameEngine.gameOver
+            color: "#990f172a"
+            z: 101
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: Math.min(parent.width - 40, 410)
+                height: 220
+                radius: 14
+                color: "#1e293b"
+                border.color: "#facc15"
+                border.width: 2
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 24
+                    spacing: 18
+
+                    Text {
+                        width: parent.width
+                        text: qsTr("Для открытия Сейфа нужен Ключ")
+                        color: "#f8fafc"
+                        font.pixelSize: 23
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: qsTr("Найдите Ключ на четвёртом уровне и вернитесь к Сейфу.")
+                        color: "#cbd5e1"
+                        font.pixelSize: 17
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 44
+                        radius: 8
+                        color: acknowledgeMouse.containsMouse ? "#b45309" : "#92400e"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Понятно")
+                            color: "#fff7ed"
+                            font.pixelSize: 18
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: acknowledgeMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: gameEngine.dismissKeyRequiredNotice()
+                        }
+                    }
+                }
             }
         }
 

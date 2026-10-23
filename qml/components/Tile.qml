@@ -10,6 +10,7 @@ Item {
     property string type: "empty"
     property color crystalColor: "#35d6c4"
     property bool hasKey: false
+    property bool safeAlert: false
     // Выход становится доступен после сбора всех обязательных Призов.
     // Состояние приходит из GameEngine и обновляется вместе со счётчиком.
     property bool exitAvailable: false
@@ -91,6 +92,23 @@ Item {
                     radius: width / 2
                     color: "#1e293b"
                 }
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 1
+            color: "transparent"
+            border.color: "#facc15"
+            border.width: 3
+            opacity: 0
+            visible: tile.safeAlert
+
+            SequentialAnimation on opacity {
+                running: tile.safeAlert
+                loops: Animation.Infinite
+                NumberAnimation { from: 0.05; to: 0.95; duration: 350; easing.type: Easing.InOutSine }
+                NumberAnimation { from: 0.95; to: 0.05; duration: 350; easing.type: Easing.InOutSine }
             }
         }
 

@@ -81,12 +81,53 @@ void GameEngine::initializeLevels(const QVariantList &authoredLevels)
     // добавляются в этот же список и используют общую загрузку и снимки.
     m_levels = levels;
     m_authoredLevelCount = levels.size();
-    m_hasKey = false;
+    if (m_hasKey) {
+        m_hasKey = false;
+        emit hasKeyChanged();
+    }
+    m_keyRequiredNotice = false;
+    m_nearLockedSafe = false;
     m_levelSnapshots.clear();
     m_levelSnapshots.resize(m_levels.size());
     m_currentLevel = 1;
     m_playerMovedSinceCrystalUpdate = false;
     loadLevel();
+}
+
+void GameEngine::restartGame()
+{
+    if (m_authoredLevelCount <= 0 || m_levels.isEmpty())
+        return;
+
+    m_levels.resize(m_authoredLevelCount);
+    m_levelSnapshots.clear();
+    m_levelSnapshots.resize(m_authoredLevelCount);
+    m_currentLevel = 1;
+    m_landscapeSeed = 0;
+    m_score = 0;
+    m_prizesLeft = 0;
+    m_lives = 3;
+    if (m_hasKey) {
+        m_hasKey = false;
+        emit hasKeyChanged();
+    }
+    m_gameOver = false;
+    m_levelComplete = false;
+    m_keyRequiredNotice = false;
+    m_nearLockedSafe = false;
+    m_playerState = "idle";
+    m_playerFacingRight = true;
+    m_playerMovedSinceCrystalUpdate = false;
+    m_fallingCrystalCells.clear();
+    loadLevel();
+}
+
+void GameEngine::dismissKeyRequiredNotice()
+{
+    if (!m_keyRequiredNotice)
+        return;
+    m_keyRequiredNotice = false;
+    emit statusChanged();
 }
 
 void GameEngine::loadLevel()
@@ -96,6 +137,7 @@ void GameEngine::loadLevel()
         timer->deleteLater();
     }
     m_dugTileTimers.clear();
+    m_fallingCrystalCells.clear();
 
     const QVector<QString> &level = m_levels.at(m_currentLevel - 1);
     const LevelSnapshot &snapshot = m_levelSnapshots.at(m_currentLevel - 1);
@@ -106,12 +148,9 @@ void GameEngine::loadLevel()
     if (restoringSnapshot) {
         m_playerX = snapshot.playerX;
         m_playerY = snapshot.playerY;
-        m_prizesLeft = snapshot.prizesLeft;
-        m_levelComplete = snapshot.levelComplete;
-    } else {
-        m_prizesLeft = 0;
-        m_levelComplete = false;
     }
+    m_prizesLeft = 0;
+    m_fallingCrystalCells.clear();
 
     QVector<TileModel::Tile> tiles;
     QVector<EnemyModel::Enemy> enemies;
@@ -130,8 +169,7 @@ void GameEngine::loadLevel()
             case '-': type = "rope"; break;
             case '$':
                 type = "gold";
-                if (!restoringSnapshot)
-                    ++m_prizesLeft;
+                ++m_prizesLeft;
                 break;
             case 'S': type = "superPrize"; break;
             case 'P':
@@ -155,6 +193,9 @@ void GameEngine::loadLevel()
     }
     m_tilesModel.setTiles(tiles);
     m_enemiesModel.setEnemies(enemies);
+    m_levelComplete = m_prizesLeft == 0;
+    m_nearLockedSafe = !m_hasKey && isAdjacentToLockedSafe(m_playerY, m_playerX);
+    m_keyRequiredNotice = m_nearLockedSafe;
 
     emit levelChanged();
     emit playerPositionChanged();
@@ -184,9 +225,18 @@ bool GameEngine::playerCanEnter(int row, int col) const
     return ch != '#' && ch != 'C';
 }
 
+bool GameEngine::isAdjacentToLockedSafe(int row, int col) const
+{
+    if (m_hasKey)
+        return false;
+
+    return tileAt(row - 1, col) == 'B' || tileAt(row + 1, col) == 'B'
+            || tileAt(row, col - 1) == 'B' || tileAt(row, col + 1) == 'B';
+}
+
 void GameEngine::generateNextLandscape()
 {
-    if (m_gameOver)
+    if (m_gameOver || m_keyRequiredNotice)
         return;
 
     // Seed скрыт от игрока и увеличивается при каждой попытке генерации.
@@ -220,12 +270,19 @@ void GameEngine::generateNextLandscape()
 
 void GameEngine::movePlayer(int dx, int dy)
 {
-    if (m_gameOver) return;
+    if (m_gameOver || m_keyRequiredNotice) return;
 
     if (dx != 0) m_playerFacingRight = (dx > 0);
 
     int nx = m_playerX + dx;
     int ny = m_playerY + dy;
+
+    if (tileAt(ny, nx) == 'B' && !m_hasKey) {
+        m_nearLockedSafe = true;
+        m_keyRequiredNotice = true;
+        emit statusChanged();
+        return;
+    }
 
     if (dy == 0 && dx != 0 && tileAt(ny, nx) == 'C') {
         const int destinationX = nx + dx;
@@ -243,6 +300,8 @@ void GameEngine::movePlayer(int dx, int dy)
             return;
 
         // Push exactly one crystal by one cell; the crystal above it then follows normal gravity.
+        m_fallingCrystalCells.remove(ny * m_columns + nx);
+        m_fallingCrystalCells.remove(ny * m_columns + destinationX);
         setTileAt(ny, nx, '.');
         setTileAt(ny, destinationX, 'C');
         m_tilesModel.updateTile(ny, nx, "empty");
@@ -284,6 +343,9 @@ void GameEngine::movePlayer(int dx, int dy)
             setTileAt(ny, nx, '.');
             m_tilesModel.updateTile(ny, nx, "empty");
             m_hasKey = true;
+            m_nearLockedSafe = false;
+            m_keyRequiredNotice = false;
+            emit hasKeyChanged();
             emit statusChanged();
         }
 
@@ -293,9 +355,20 @@ void GameEngine::movePlayer(int dx, int dy)
             setTileAt(ny, nx, '.');
             m_tilesModel.updateTile(ny, nx, "empty");
             m_hasKey = false;
+            emit hasKeyChanged();
             addScore(100);
             emit statusChanged();
         }
+
+        const bool nowNearLockedSafe = isAdjacentToLockedSafe(m_playerY, m_playerX);
+        if (nowNearLockedSafe && !m_nearLockedSafe) {
+            m_keyRequiredNotice = true;
+            emit statusChanged();
+        } else if (!nowNearLockedSafe && m_keyRequiredNotice) {
+            m_keyRequiredNotice = false;
+            emit statusChanged();
+        }
+        m_nearLockedSafe = nowNearLockedSafe;
 
         if (dy < 0) m_playerState = "climb";
         else if (dx != 0) m_playerState = "run";
@@ -326,15 +399,13 @@ void GameEngine::saveCurrentLevel()
     snapshot.grid = m_grid;
     snapshot.playerX = m_playerX;
     snapshot.playerY = m_playerY;
-    snapshot.prizesLeft = m_prizesLeft;
-    snapshot.levelComplete = m_levelComplete;
     snapshot.valid = true;
 }
 
 void GameEngine::switchToLevel(int targetLevel)
 {
     if (targetLevel < 1 || targetLevel > m_levels.size()
-            || targetLevel == m_currentLevel || m_gameOver)
+            || targetLevel == m_currentLevel || m_gameOver || m_keyRequiredNotice)
         return;
 
     saveCurrentLevel();
@@ -347,7 +418,7 @@ void GameEngine::dig()
 {
     // Сбор всех обязательных Призов открывает выход, но не блокирует действия
     // игрока на текущем уровне до фактического перехода.
-    if (m_gameOver) return;
+    if (m_gameOver || m_keyRequiredNotice) return;
 
     int dx = m_playerFacingRight ? 1 : -1;
     int bx = m_playerX + dx;
@@ -370,6 +441,11 @@ void GameEngine::dig()
                 timer->deleteLater();
                 return;
             }
+            if (m_keyRequiredNotice) {
+                m_dugTileTimers.insert(tileKey, timer);
+                timer->start(100);
+                return;
+            }
             if (tileAt(by, bx) == '.') {
                 setTileAt(by, bx, '#');
                 m_tilesModel.updateTile(by, bx, "brick");
@@ -379,6 +455,7 @@ void GameEngine::dig()
                 // Кристалл, застрявший в яме к моменту восстановления, становится
                 // дополнительным Призом и не входит в обязательный счётчик.
                 setTileAt(by, bx, '*');
+                m_fallingCrystalCells.remove(tileKey);
                 m_tilesModel.updateTile(by, bx, "bonusPrize");
             }
             timer->deleteLater();
@@ -395,7 +472,7 @@ void GameEngine::dig()
 
 void GameEngine::updateCrystals()
 {
-    if (m_gameOver)
+    if (m_gameOver || m_keyRequiredNotice)
         return;
 
     const bool playerMovedSinceLastUpdate = m_playerMovedSinceCrystalUpdate;
@@ -411,6 +488,15 @@ void GameEngine::updateCrystals()
         if (tile == '*') return QStringLiteral("bonusPrize");
         return QStringLiteral("crystal");
     };
+    const auto cellKey = [this](int row, int col) {
+        return row * m_columns + col;
+    };
+    const auto moveFallingState = [this, &cellKey](int fromRow, int fromCol,
+                                                  int toRow, int toCol, QChar gem) {
+        m_fallingCrystalCells.remove(cellKey(fromRow, fromCol));
+        if (gem == 'C')
+            m_fallingCrystalCells.insert(cellKey(toRow, toCol));
+    };
     // Dug tiles are traversable. The player's cell remains an obstacle to object
     // movement; lethal contact is checked only for a falling Crystal with a gap.
     const auto isEmpty = [this](int row, int col) {
@@ -422,6 +508,19 @@ void GameEngine::updateCrystals()
             if (!isGem(row, col))
                 continue;
             const QChar fallingGem = tileAt(row, col);
+            const int sourceKey = cellKey(row, col);
+            const bool wasFalling = fallingGem == 'C'
+                    && m_fallingCrystalCells.contains(sourceKey);
+
+            if (wasFalling && col == m_playerX && m_playerY == row + 1) {
+                if (!playerMovedSinceLastUpdate) {
+                    loseLife();
+                    return;
+                }
+                // Персонаж только что переместился; пока он остаётся внизу,
+                // Кристалл сохраняет состояние падения до следующего шага.
+                return;
+            }
 
             // A vertical chain falls as one unit when the cell under its bottom gem is free.
             int chainTop = row;
@@ -436,6 +535,7 @@ void GameEngine::updateCrystals()
                 for (int sourceRow = row; sourceRow >= chainTop; --sourceRow) {
                     const int destinationRow = sourceRow + 1;
                     const QChar shiftedGem = tileAt(sourceRow, col);
+                    moveFallingState(sourceRow, col, destinationRow, col, shiftedGem);
                     setTileAt(destinationRow, col, shiftedGem);
                     setTileAt(sourceRow, col, '.');
                     m_tilesModel.updateTile(destinationRow, col, gemType(shiftedGem));
@@ -454,13 +554,17 @@ void GameEngine::updateCrystals()
                 }
                 setTileAt(row, col, '.');
                 setTileAt(row + 1, col, fallingGem);
+                moveFallingState(row, col, row + 1, col, fallingGem);
                 m_tilesModel.updateTile(row, col, "empty");
                 m_tilesModel.updateTile(row + 1, col, gemType(fallingGem));
                 return;
             }
 
             if (!isGem(row + 1, col))
+            {
+                m_fallingCrystalCells.remove(sourceKey);
                 continue;
+            }
 
             // B sits on A. It can tumble around A if both cells on one side
             // of the pair are clear; the rest of their vertical chain follows down.
@@ -472,11 +576,19 @@ void GameEngine::updateCrystals()
                     break;
                 }
             }
-            if (tumbleDirection == 0)
+            if (tumbleDirection == 0) {
+                m_fallingCrystalCells.remove(sourceKey);
                 continue;
+            }
 
             const QChar upperGem = tileAt(row, col);
             const QChar tumblingGem = tileAt(row + 1, col);
+            m_fallingCrystalCells.remove(cellKey(row, col));
+            m_fallingCrystalCells.remove(cellKey(row + 1, col));
+            if (upperGem == 'C')
+                m_fallingCrystalCells.insert(cellKey(row + 1, col));
+            if (tumblingGem == 'C')
+                m_fallingCrystalCells.insert(cellKey(row + 1, col + tumbleDirection));
             setTileAt(row, col, '.');
             setTileAt(row + 1, col + tumbleDirection, tumblingGem);
             setTileAt(row + 1, col, upperGem);
@@ -487,6 +599,7 @@ void GameEngine::updateCrystals()
             for (int sourceRow = row - 1; sourceRow >= chainTop; --sourceRow) {
                 const int destinationRow = sourceRow + 1;
                 const QChar shiftedGem = tileAt(sourceRow, col);
+                moveFallingState(sourceRow, col, destinationRow, col, shiftedGem);
                 setTileAt(destinationRow, col, shiftedGem);
                 setTileAt(sourceRow, col, '.');
                 m_tilesModel.updateTile(destinationRow, col, gemType(shiftedGem));
@@ -503,22 +616,16 @@ void GameEngine::loseLife()
         return;
 
     --m_lives;
+    m_gameOver = true;
     m_playerState = "idle";
     emit scoreChanged();
     emit playerStateChanged();
-    if (m_lives <= 0) {
-        m_gameOver = true;
-        emit statusChanged();
-        return;
-    }
-
-    // При оставшихся жизнях перезагружаем текущий уровень или его снимок.
-    loadLevel();
+    emit statusChanged();
 }
 
 void GameEngine::updateGame()
 {
-    if (m_gameOver || m_levelComplete) return;
+    if (m_gameOver || m_levelComplete || m_keyRequiredNotice) return;
 
     // Простая гравитация игрока: если под ним пустота — падаем.
     QChar below = tileAt(m_playerY + 1, m_playerX);

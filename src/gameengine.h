@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QAbstractListModel>
 #include <QHash>
+#include <QSet>
 #include <QTimer>
 #include <QVariantList>
 #include <QVector>
@@ -114,9 +115,10 @@ class GameEngine : public QObject
     Q_PROPERTY(int highScore READ highScore NOTIFY scoreChanged)
     Q_PROPERTY(int prizesLeft READ prizesLeft NOTIFY scoreChanged)
     Q_PROPERTY(int lives READ lives NOTIFY scoreChanged)
-    Q_PROPERTY(bool hasKey READ hasKey NOTIFY statusChanged)
+    Q_PROPERTY(bool hasKey READ hasKey NOTIFY hasKeyChanged)
     Q_PROPERTY(bool gameOver READ gameOver NOTIFY statusChanged)
     Q_PROPERTY(bool levelComplete READ levelComplete NOTIFY statusChanged)
+    Q_PROPERTY(bool keyRequiredNotice READ keyRequiredNotice NOTIFY statusChanged)
     Q_PROPERTY(TileModel* tilesModel READ tilesModel CONSTANT)
     Q_PROPERTY(EnemyModel* enemiesModel READ enemiesModel CONSTANT)
 
@@ -138,6 +140,7 @@ public:
     bool hasKey() const { return m_hasKey; }
     bool gameOver() const { return m_gameOver; }
     bool levelComplete() const { return m_levelComplete; }
+    bool keyRequiredNotice() const { return m_keyRequiredNotice; }
 
     TileModel* tilesModel() { return &m_tilesModel; }
     EnemyModel* enemiesModel() { return &m_enemiesModel; }
@@ -147,11 +150,14 @@ public:
     Q_INVOKABLE void updateGame();
     Q_INVOKABLE void updateCrystals();
     Q_INVOKABLE void initializeLevels(const QVariantList &authoredLevels);
+    Q_INVOKABLE void restartGame();
+    Q_INVOKABLE void dismissKeyRequiredNotice();
 
 signals:
     void playerPositionChanged();
     void playerStateChanged();
     void scoreChanged();
+    void hasKeyChanged();
     void statusChanged();
     void levelChanged();
 
@@ -160,14 +166,13 @@ private:
         QVector<QString> grid;
         int playerX = 0;
         int playerY = 0;
-        int prizesLeft = 0;
-        bool levelComplete = false;
         bool valid = false;
     };
 
     void loadLevel();
     void addScore(int points);
     void loseLife();
+    bool isAdjacentToLockedSafe(int row, int col) const;
     void generateNextLandscape();
     void saveCurrentLevel();
     void switchToLevel(int targetLevel);
@@ -191,7 +196,10 @@ private:
     bool m_hasKey = false;
     bool m_gameOver = false;
     bool m_levelComplete = false;
+    bool m_keyRequiredNotice = false;
+    bool m_nearLockedSafe = false;
     bool m_playerMovedSinceCrystalUpdate = false;
+    QSet<int> m_fallingCrystalCells;
 
     QVector<QString> m_grid; // каждый QString — строка уровня
     QVector<QVector<QString>> m_levels;
