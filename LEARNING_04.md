@@ -28,6 +28,8 @@ Qt Test выполняет проверки. CTest помогает запуск
 | `remainingPrizeBlocksExit` | Выход не переводит на следующий уровень, пока остаётся обязательный Приз. |
 | `fallingCrystalKillsStationaryPlayer` | Падающий Кристалл убивает Персонажа, который остался под ним. |
 | `stationaryCrystalDirectlyAbovePlayerIsNotLethal` | Неподвижный Кристалл непосредственно над Персонажем не считается падающим. |
+| `playerCanEnterAndLeaveDugBrickOnLevelOne` | На реальной карте первого уровня Персонаж входит в выкопанный Кирпич, проходит через клетку, выходит и может войти повторно; пустая клетка затем восстанавливается в Кирпич. |
+| `restoredBrickKillsPlayerWhoRemainsInDugCellOnLevelOne` | Если Персонаж остаётся в яме до восстановления Кирпича, он теряет жизнь. |
 | `crystalFallingIntoDugBrickBecomesBonusPrize` | Если Кристалл остаётся в яме к концу таймера, он превращается в Приз; его сбор запускает новый полный таймер восстановления Кирпича. |
 | `bonusPrizeRestoresBrickAndAllowsRepeatedDigging` | Сбор Приза перезапускает таймер, Кирпич восстанавливается после его срабатывания, и процесс повторяется с новым Кристаллом. |
 | `levelOneCanRepeatCrystalPrizeBrickCycle` | Цикл дважды проверяется на карте первого уровня, включая новый таймер после сбора Приза. |

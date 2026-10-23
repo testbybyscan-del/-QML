@@ -17,10 +17,11 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        visible: tile.type === "brick" || tile.type === "dug"
-        color: tile.type === "dug" ? "#3a1f08" : "#8b4513"
-        border.color: tile.type === "dug" ? "transparent" : "#5a2d0c"
-        border.width: tile.type === "dug" ? 0 : 1
+        // Выкопанная клетка остаётся проходимой и выглядит как пустое поле.
+        visible: tile.type === "brick"
+        color: "#8b4513"
+        border.color: "#5a2d0c"
+        border.width: 1
 
         Rectangle {
             anchors.centerIn: parent

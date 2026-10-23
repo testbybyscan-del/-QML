@@ -269,6 +269,66 @@ private slots:
         QCOMPARE(game.lives(), 3);
     }
 
+    void playerCanEnterAndLeaveDugBrickOnLevelOne()
+    {
+        QQmlEngine qmlEngine;
+        const QStringList rows = loadQmlLevel(qmlEngine, QStringLiteral("qrc:/levels/Level1.qml"));
+        QVERIFY(!rows.isEmpty());
+
+        GameEngine game;
+        initialize(game, rows);
+        for (int step = 0; step < 10; ++step)
+            game.movePlayer(0, -1); // из старта на row 1, column 3
+        for (int step = 0; step < 4; ++step)
+            game.movePlayer(1, 0); // подходим к кирпичу row 2, column 8
+
+        QCOMPARE(game.playerY(), 1);
+        QCOMPARE(game.playerX(), 7);
+        game.dig();
+        QCOMPARE(tileTypeAt(game, 2, 8), QStringLiteral("dug"));
+
+        game.movePlayer(0, 1);  // входим в открытую клетку снизу
+        game.movePlayer(1, 0); // проходим через неё по горизонтали
+        QCOMPARE(game.playerY(), 2);
+        QCOMPARE(game.playerX(), 8);
+        game.movePlayer(-1, 0);
+        game.movePlayer(1, 0); // проверяем повторный вход
+        QCOMPARE(game.playerX(), 8);
+        game.movePlayer(-1, 0); // покидаем яму до восстановления
+
+        const QList<QTimer *> timers = game.findChildren<QTimer *>();
+        QCOMPARE(timers.size(), 1);
+        timers.first()->setInterval(1);
+        QTRY_COMPARE(tileTypeAt(game, 2, 8), QStringLiteral("brick"));
+        QVERIFY(!game.gameOver());
+    }
+
+    void restoredBrickKillsPlayerWhoRemainsInDugCellOnLevelOne()
+    {
+        QQmlEngine qmlEngine;
+        const QStringList rows = loadQmlLevel(qmlEngine, QStringLiteral("qrc:/levels/Level1.qml"));
+        QVERIFY(!rows.isEmpty());
+
+        GameEngine game;
+        initialize(game, rows);
+        for (int step = 0; step < 10; ++step)
+            game.movePlayer(0, -1);
+        for (int step = 0; step < 4; ++step)
+            game.movePlayer(1, 0);
+        game.dig();
+        game.movePlayer(0, 1);
+        game.movePlayer(1, 0);
+        QCOMPARE(game.playerX(), 8);
+        QCOMPARE(game.playerY(), 2);
+
+        const QList<QTimer *> timers = game.findChildren<QTimer *>();
+        QCOMPARE(timers.size(), 1);
+        timers.first()->setInterval(1);
+        QTRY_VERIFY(game.gameOver());
+        QCOMPARE(game.lives(), 2);
+        QCOMPARE(tileTypeAt(game, 2, 8), QStringLiteral("brick"));
+    }
+
     void crystalFallingIntoDugBrickBecomesBonusPrize()
     {
         QStringList rows = emptyLevel();
