@@ -19,6 +19,8 @@ qt5_add_resources(QML_RESOURCES qml.qrc)
 # Точка входа приложения
 add_executable(boulderdash
     main.cpp
+    src/gamesettings.cpp
+    src/gamesettings.h
     src/gameengine.cpp
     src/gameengine.h
     src/landscapegenerator.cpp
@@ -52,9 +54,14 @@ if(BUILD_TESTING)
         Qt5::Test
     )
 
+    add_executable(test_gamesettings tests/test_gamesettings.cpp src/gamesettings.cpp src/gamesettings.h)
+    target_link_libraries(test_gamesettings PRIVATE Qt5::Core Qt5::Test)
+    add_test(NAME gamesettings COMMAND test_gamesettings)
     add_test(NAME gameengine COMMAND test_gameengine)
     add_executable(test_tilelibrary
         tests/test_tilelibrary.cpp
+        src/gamesettings.cpp
+        src/gamesettings.h
         src/gameengine.cpp
         src/gameengine.h
         src/landscapegenerator.cpp

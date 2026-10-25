@@ -7,16 +7,27 @@
 #include <QSignalSpy>
 #include <QtTest>
 #include "../src/gameengine.h"
+#include "../src/gamesettings.h"
+#include <QTemporaryDir>
+#include <QSettings>
 
 class TileLibraryTest : public QObject
 {
     Q_OBJECT
+    QTemporaryDir m_configDir;
 private slots:
     void initTestCase()
     {
+        QVERIFY(m_configDir.isValid());
+        qputenv("XDG_CONFIG_HOME", m_configDir.path().toUtf8());
+        QCoreApplication::setOrganizationName("BoulderDashTests");
+        QCoreApplication::setApplicationName("InterfaceTests");
+        qmlRegisterType<GameSettings>("BoulderDash", 1, 0, "GameSettings");
         qRegisterMetaType<QList<QQmlError>>("QList<QQmlError>");
         qmlRegisterType<GameEngine>("BoulderDash", 1, 0, "GameEngine");
     }
+
+    void init() { QSettings().clear(); }
 
     void rendersTiles_data()
     {
@@ -164,6 +175,85 @@ private slots:
         QCOMPARE(warnings.count(), 0);
     }
 
+    void menuSettingsAndPause()
+    {
+        QQmlApplicationEngine engine;
+        QSignalSpy warnings(&engine, &QQmlEngine::warnings);
+        engine.load(QUrl("qrc:/main.qml"));
+        QCOMPARE(engine.rootObjects().size(), 1);
+        auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        QVERIFY(window);
+        auto *game = window->findChild<GameEngine *>();
+        auto *settings = window->findChild<GameSettings *>();
+        auto *physics = window->findChild<QObject *>("physicsTimer");
+        QVERIFY(game); QVERIFY(settings); QVERIFY(physics);
+        QTest::qWait(50);
+        auto click = [window](const char *name) {
+            auto *button = window->findChild<QQuickItem *>(name);
+            if (!button || !button->isVisible()) return false;
+            auto center = button->mapToScene(QPointF(button->width() / 2, button->height() / 2)).toPoint();
+            QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, center, 0);
+            QCoreApplication::processEvents();
+            return true;
+        };
+        QCOMPARE(window->property("overlay").toString(), QString("menu"));
+        QVERIFY(game->paused());
+        QVERIFY(!physics->property("running").toBool());
+        QVERIFY(click("openSettingsButton"));
+        QCOMPARE(window->property("overlay").toString(), QString("settings"));
+        QVERIFY(click("settingsThemeButton"));
+        QCOMPARE(settings->tileTheme(), QString("kenney"));
+        QVERIFY(click("settingsPlayerButton"));
+        QCOMPARE(settings->playerVariant(), QString("astronaut"));
+        QVERIFY(click("settingsAnimationsButton"));
+        QVERIFY(!settings->animationsEnabled());
+        QVERIFY(click("settingsSpeedButton"));
+        QCOMPARE(settings->animationInterval(), 220);
+        const auto snapshot = qgetenv("QML_SETTINGS_SCREENSHOT");
+        if (!snapshot.isEmpty()) {
+            QTest::qWait(100);
+            auto grab = window->contentItem()->grabToImage();
+            QVERIFY(grab);
+            QSignalSpy ready(grab.data(), &QQuickItemGrabResult::ready);
+            if (grab->image().isNull()) QVERIFY(ready.wait(5000));
+            QVERIFY(grab->image().save(QString::fromLocal8Bit(snapshot)));
+        }
+        QVERIFY(click("closeSettingsButton"));
+        QVERIFY(game->paused());
+        QVERIFY(click("newGameButton"));
+        QVERIFY(!game->paused());
+        QVERIFY(physics->property("running").toBool());
+        QCOMPARE(window->property("overlay").toString(), QString(""));
+        auto *player = window->findChild<QObject *>("gamePlayer");
+        QVERIFY(player);
+        QCOMPARE(player->property("variant").toString(), QString("astronaut"));
+        QCOMPARE(player->property("animationInterval").toInt(), 220);
+        QVERIFY(!player->property("animated").toBool());
+        QVERIFY(click("toolbarSettingsButton"));
+        QVERIFY(game->paused());
+        QVERIFY(click("closeSettingsButton"));
+        QVERIFY(!game->paused());
+        QVERIFY(click("pauseButton"));
+        QVERIFY(game->paused());
+        const int x = game->playerX(), y = game->playerY();
+        QTest::keyClick(window, Qt::Key_Right);
+        QCOMPARE(game->playerX(), x); QCOMPARE(game->playerY(), y);
+        QVERIFY(click("resumeButton"));
+        QVERIFY(!game->paused());
+        window->requestActivate();
+        QTest::qWait(50);
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(game->paused());
+        QTest::keyClick(window, Qt::Key_P);
+        QTRY_VERIFY(!game->paused());
+        // Новый объект настроек читает значения, сохранённые UI.
+        GameSettings restored;
+        QCOMPARE(restored.tileTheme(), QString("kenney"));
+        QCOMPARE(restored.playerVariant(), QString("astronaut"));
+        QCOMPARE(restored.animationInterval(), 220);
+        QCOMPARE(warnings.count(), 0);
+    }
+
     void gameChangesThemeWithoutChangingState()
     {
         QQmlApplicationEngine engine;
@@ -173,6 +263,7 @@ private slots:
         QObject *root = engine.rootObjects().first();
         auto *game = root->findChild<GameEngine *>();
         QVERIFY(game);
+        QVERIFY(QMetaObject::invokeMethod(root, "newGame"));
         const int score = game->score();
         const int prizes = game->prizesLeft();
         const int x = game->playerX();

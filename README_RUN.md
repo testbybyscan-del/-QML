@@ -14,7 +14,8 @@
 ### 1. Установка зависимостей (Ubuntu/Debian)
 ```bash
 sudo apt update
-sudo apt install cmake ninja-build build-essential qtbase5-dev qtdeclarative5-dev
+sudo apt install cmake ninja-build build-essential qtbase5-dev qtdeclarative5-dev \
+    qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtqml qml-module-qtqml-models2
 ```
 
 ### 2. Создание директории для сборки
@@ -39,7 +40,15 @@ cmake --build build-qt5
 
 - Стрелки или WASD: движение по игровому полю
 - Пробел: копать вниз-вбок
-- ESC: выход из игры
+- Esc или P: пауза / продолжение; в настройках — назад. Выход доступен в меню.
+
+## Меню и настройки
+
+При запуске выберите «Начать игру». Кнопки «Пауза» и «Настройки» доступны в игровом окне. Из меню можно продолжить игру, начать новую или выйти.
+
+Настройки сохраняют тему, героя, разрешение анимации и интервал кадров (80/140/220 мс). Скорость игры не меняется. На паузе физика и таймеры Кирпичей остановлены; после продолжения таймеры сохраняют оставшееся время. Новая игра сохраняет оформление и сбрасывает прохождение.
+
+В стандартном окружении H2 файл настроек — `~/.config/Majorov/BoulderDash.conf`. Новое учебное руководство: `/home/majorov/docs/LEARNING_06.md`.
 
 ## Оформление
 

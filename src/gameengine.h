@@ -103,6 +103,7 @@ class GameEngine : public QObject
     Q_OBJECT
     QML_ELEMENT
 
+    Q_PROPERTY(bool paused READ paused WRITE setPaused NOTIFY pausedChanged)
     Q_PROPERTY(int columns READ columns NOTIFY levelChanged)
     Q_PROPERTY(int rows READ rows NOTIFY levelChanged)
     Q_PROPERTY(int currentLevel READ currentLevel NOTIFY levelChanged)
@@ -126,6 +127,9 @@ class GameEngine : public QObject
 
 public:
     explicit GameEngine(QObject *parent = nullptr);
+
+    bool paused() const { return m_paused; }
+    void setPaused(bool paused);
 
     int columns() const { return m_columns; }
     int rows() const { return m_rows; }
@@ -160,6 +164,7 @@ public:
     Q_INVOKABLE void dismissSafeOpenedNotice();
 
 signals:
+    void pausedChanged();
     void playerPositionChanged();
     void playerStateChanged();
     void scoreChanged();
@@ -218,6 +223,8 @@ private:
     QVector<QVector<QString>> m_levels;
     QVector<LevelSnapshot> m_levelSnapshots;
 
+    bool m_paused = false;
+    QHash<int, int> m_pausedDugRemaining;
     QHash<int, QTimer*> m_dugTileTimers;
 
     TileModel m_tilesModel;

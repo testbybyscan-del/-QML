@@ -36,5 +36,8 @@
         <file alias="assets/tilesets/kenney/pixel-platformer/Tiles/Characters/tile_0018.png">assets/tilesets/kenney/pixel-platformer/Tiles/Characters/tile_0018.png</file>
         <file alias="assets/tilesets/kenney/pixel-platformer/Tiles/Characters/tile_0019.png">assets/tilesets/kenney/pixel-platformer/Tiles/Characters/tile_0019.png</file>
         <file alias="assets/tilesets/kenney/pixel-platformer/Tiles/Characters/tile_0020.png">assets/tilesets/kenney/pixel-platformer/Tiles/Characters/tile_0020.png</file>
+        <file alias="components/MenuButton.qml">qml/components/MenuButton.qml</file>
+        <file alias="components/GameMenu.qml">qml/components/GameMenu.qml</file>
+        <file alias="components/SettingsPanel.qml">qml/components/SettingsPanel.qml</file>
     </qresource>
 </RCC>

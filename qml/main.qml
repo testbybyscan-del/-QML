@@ -14,9 +14,35 @@ Window {
     title: qsTr("Boulder Dash")
     color: "#111827"
 
-    property string playerVariant: "classic"
+    property alias playerVariant: settings.playerVariant
+    property alias tileTheme: settings.tileTheme
+    property bool sessionStarted: false
+    property string overlay: "menu"
+    property string settingsReturn: "menu"
+    readonly property GameSettings gameSettingsObject: settings
+    GameSettings { id: settings; objectName: "gameSettings" }
+    function resumeGame() {
+        if (sessionStarted) overlay = ""
+        gameRoot.forceActiveFocus()
+    }
+    function newGame() {
+        gameEngine.restartGame()
+        sessionStarted = true
+        overlay = ""
+        gameRoot.forceActiveFocus()
+    }
+    function openSettings() {
+        settingsReturn = overlay === "menu" ? "menu" : ""
+        overlay = "settings"
+    }
+    function togglePause() {
+        if (overlay === "settings") overlay = settingsReturn
+        else if (overlay === "menu" && sessionStarted) resumeGame()
+        else overlay = "menu"
+    }
+    Shortcut { sequence: "Escape"; onActivated: root.togglePause() }
+    Shortcut { sequence: "P"; onActivated: root.togglePause() }
     PlayerStyles { id: playerStyles }
-    property string tileTheme: "classic"
     readonly property int tileSize: 32
     readonly property string messageFontFamily: zxSpectrumFont.status === FontLoader.Ready
                                                 ? zxSpectrumFont.name : "monospace"
@@ -40,11 +66,13 @@ Window {
 
     GameEngine {
         id: gameEngine
+        paused: root.overlay !== ""
     }
 
     Timer {
+        objectName: "physicsTimer"
         interval: 250
-        running: true
+        running: !gameEngine.paused
         repeat: true
         onTriggered: gameEngine.updateCrystals()
     }
@@ -54,6 +82,7 @@ Window {
         anchors.fill: parent
         focus: true
         Keys.onPressed: (event) => {
+            if (root.overlay !== "") { event.accepted = true; return }
             switch (event.key) {
             case Qt.Key_Left:
             case Qt.Key_A:
@@ -74,9 +103,6 @@ Window {
             case Qt.Key_Space:
                 gameEngine.dig()
                 break
-            case Qt.Key_Escape:
-                Qt.quit()
-                break
             default:
                 return
             }
@@ -96,6 +122,16 @@ Window {
             Flow {
                 width: board.width
                 spacing: 12
+                MenuButton {
+                    objectName: "pauseButton"
+                    width: 108; height: 30; text: qsTr("Пауза")
+                    onClicked: root.overlay = "menu"
+                }
+                MenuButton {
+                    objectName: "toolbarSettingsButton"
+                    width: 108; height: 30; text: qsTr("Настройки")
+                    onClicked: root.openSettings()
+                }
                 Rectangle {
                     objectName: "playerVariantButton"
                     width: 236; height: 30; radius: 5; color: "#334155"
@@ -179,6 +215,8 @@ Window {
                         y: model.row * root.tileSize
                         size: root.tileSize
                         theme: root.tileTheme
+                        animated: settings.animationsEnabled && !gameEngine.paused
+                        animationInterval: settings.animationInterval
                         type: model.type
                         hasKey: gameEngine.hasKey
                         safeAlert: model.type === "safe" && !gameEngine.hasKey
@@ -197,6 +235,8 @@ Window {
                 Player {
                     objectName: "gamePlayer"
                     variant: root.playerVariant
+                    animated: settings.animationsEnabled && !gameEngine.paused
+                    animationInterval: settings.animationInterval
                     x: gameEngine.playerX * root.tileSize
                     y: gameEngine.playerY * root.tileSize
                     size: root.tileSize
@@ -219,7 +259,7 @@ Window {
                       ? qsTr("Все Призы собраны. Дойдите до выхода в правом нижнем углу, чтобы продолжить. Нижний левый угол — назад")
                       : gameEngine.currentLevel > 1
                         ? qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать. Нижний левый угол — предыдущий экран, нижний правый — следующий после сбора всех призов")
-                        : qsTr("Соберите все Призы: стрелки/WASD — движение, пробел — копать, Esc — выход")
+                        : qsTr("Соберите все Призы: стрелки/WASD — движение, пробел — копать, Esc/P — пауза")
                 color: "#cbd5e1"
                 font.pixelSize: 15
                 horizontalAlignment: Text.AlignHCenter
@@ -534,6 +574,27 @@ Window {
             ])
             forceActiveFocus()
         }
-        onActiveFocusChanged: if (activeFocus) forceActiveFocus()
+
     }
+    GameMenu {
+        anchors.fill: parent
+        z: 200
+        visible: root.overlay === "menu"
+        sessionStarted: root.sessionStarted
+        onResumeRequested: root.resumeGame()
+        onNewGameRequested: root.newGame()
+        onSettingsRequested: root.openSettings()
+        onQuitRequested: Qt.quit()
+    }
+    SettingsPanel {
+        anchors.fill: parent
+        z: 201
+        visible: root.overlay === "settings"
+        settings: root.gameSettingsObject
+        onClosed: {
+            root.overlay = root.settingsReturn
+            gameRoot.forceActiveFocus()
+        }
+    }
+
 }

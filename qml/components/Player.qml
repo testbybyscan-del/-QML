@@ -10,6 +10,7 @@ Item {
     property bool facingRight: true
     property string variant: "classic"
     property bool animated: true
+    property int animationInterval: 140
     property int animationFrame: 0
     readonly property var selectedStyle: styles.style(variant)
     readonly property string variantLabel: selectedStyle.label
@@ -29,7 +30,7 @@ Item {
     onAnimatedChanged: animationFrame = 0
 
     Timer {
-        interval: 140
+        interval: player.animationInterval
         repeat: true
         running: player.visible && player.animated && player.usesSprite && player.moving
         onTriggered: player.animationFrame = (player.animationFrame + 1) % player.selectedStyle.frames.length

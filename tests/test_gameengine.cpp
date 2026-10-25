@@ -97,6 +97,98 @@ private slots:
         QStandardPaths::setTestModeEnabled(true);
     }
 
+    void pauseBlocksInputPhysicsAndPreservesPitTime()
+    {
+        auto rows = emptyLevel();
+        setCell(rows, 4, 3, '#');
+        setCell(rows, 1, 6, 'C');
+        GameEngine game;
+        initialize(game, rows);
+        game.dig();
+        QCOMPARE(tileTypeAt(game, 4, 3), QString("dug"));
+        auto timers = game.findChildren<QTimer *>();
+        QCOMPARE(timers.size(), 1);
+        auto *timer = timers.first();
+        timer->setTimerType(Qt::PreciseTimer);
+        timer->start(400);
+        QTest::qWait(100);
+        const int remaining = timer->remainingTime();
+        QVERIFY(remaining > 0);
+        QSignalSpy pause(&game, &GameEngine::pausedChanged);
+        game.setPaused(true);
+        game.setPaused(true);
+        QCOMPARE(pause.count(), 1);
+        QVERIFY(!timer->isActive());
+        const int x = game.playerX(), y = game.playerY(), score = game.score();
+        const bool facing = game.playerFacingRight();
+        QSignalSpy cells(game.tilesModel(), &QAbstractItemModel::dataChanged);
+        game.movePlayer(-1, 0); game.dig(); game.updateCrystals(); game.updateGame();
+        QTest::qWait(450); // Дольше всего исходного интервала таймера.
+        QCOMPARE(game.playerX(), x); QCOMPARE(game.playerY(), y);
+        QCOMPARE(game.playerFacingRight(), facing); QCOMPARE(game.score(), score);
+        QCOMPARE(cells.count(), 0);
+        QCOMPARE(tileTypeAt(game, 4, 3), QString("dug"));
+        game.setPaused(false);
+        QCOMPARE(pause.count(), 2);
+        QVERIFY(timer->isActive());
+        QVERIFY(qAbs(timer->remainingTime() - remaining) < 80);
+        QTRY_COMPARE_WITH_TIMEOUT(tileTypeAt(game, 4, 3), QString("brick"), 700);
+        game.movePlayer(-1, 0);
+        QCOMPARE(game.playerX(), x - 1);
+    }
+
+    void repeatedPausePreservesSeveralIndependentTimers()
+    {
+        auto rows = emptyLevel();
+        setCell(rows, 3, 2, '.');
+        setCell(rows, 3, 4, 'P');
+        setCell(rows, 4, 5, '#');
+        setCell(rows, 4, 2, '#');
+        setCell(rows, 4, 3, '#');
+        GameEngine game;
+        initialize(game, rows);
+        game.dig();
+        game.movePlayer(-1, 0);
+        game.dig();
+        auto timers = game.findChildren<QTimer *>();
+        QCOMPARE(timers.size(), 2);
+        timers[0]->setTimerType(Qt::PreciseTimer); timers[0]->start(700);
+        timers[1]->setTimerType(Qt::PreciseTimer); timers[1]->start(1100);
+        for (int cycle = 0; cycle < 2; ++cycle) {
+            QHash<QTimer *, int> remaining;
+            for (auto *timer : timers) remaining.insert(timer, timer->remainingTime());
+            game.setPaused(true);
+            for (auto *timer : timers) QVERIFY(!timer->isActive());
+            QTest::qWait(60);
+            game.setPaused(false);
+            for (auto *timer : timers) {
+                QVERIFY(timer->isActive());
+                QVERIFY(qAbs(timer->remainingTime() - remaining.value(timer)) < 40);
+            }
+        }
+    }
+
+    void restartWhilePausedDiscardsOldPitTimers()
+    {
+        auto rows = emptyLevel();
+        setCell(rows, 4, 3, '#');
+        GameEngine game;
+        initialize(game, rows);
+        game.dig();
+        game.setPaused(true);
+        game.restartGame();
+        QVERIFY(game.paused());
+        QCOMPARE(tileTypeAt(game, 4, 3), QString("brick"));
+        game.setPaused(false);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY(game.findChildren<QTimer *>().isEmpty());
+        game.dig();
+        auto timers = game.findChildren<QTimer *>();
+        QCOMPARE(timers.size(), 1);
+        QVERIFY(timers.first()->isActive());
+        QVERIFY(timers.first()->remainingTime() > 14000);
+    }
+
     void collectingPrizeUpdatesScoreAndUnlocksExit()
     {
         QStringList rows = emptyLevel();

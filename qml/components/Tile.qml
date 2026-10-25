@@ -9,6 +9,7 @@ Item {
 
     property string theme: "classic"
     property bool animated: true
+    property int animationInterval: 140
     property int size: 32
     property string type: "empty"
     property color crystalColor: "#35d6c4"
@@ -26,7 +27,7 @@ Item {
     }
     Component {
         id: brickComponent
-        Tiles.BrickTile { cellSize: tile.size; theme: tile.theme; animated: tile.animated }
+        Tiles.BrickTile { cellSize: tile.size; theme: tile.theme; animated: tile.animated; animationInterval: tile.animationInterval }
     }
     Component {
         id: crystalComponent
@@ -34,12 +35,13 @@ Item {
             cellSize: tile.size
             theme: tile.theme
             animated: tile.animated
+            animationInterval: tile.animationInterval
             crystalColor: tile.crystalColor
         }
     }
     Component {
         id: prizeComponent
-        Tiles.PrizeTile { cellSize: tile.size; theme: tile.theme; animated: tile.animated }
+        Tiles.PrizeTile { cellSize: tile.size; theme: tile.theme; animated: tile.animated; animationInterval: tile.animationInterval }
     }
 
     Rectangle {
@@ -58,10 +60,10 @@ Item {
             opacity: 0
 
             SequentialAnimation on opacity {
-                running: tile.exitAvailable
+                running: tile.animated && tile.exitAvailable
                 loops: Animation.Infinite
-                NumberAnimation { from: 0.08; to: 0.48; duration: 450; easing.type: Easing.InOutSine }
-                NumberAnimation { from: 0.48; to: 0.08; duration: 450; easing.type: Easing.InOutSine }
+                NumberAnimation { from: 0.08; to: 0.48; duration: Math.round(450 * tile.animationInterval / 140); easing.type: Easing.InOutSine }
+                NumberAnimation { from: 0.48; to: 0.08; duration: Math.round(450 * tile.animationInterval / 140); easing.type: Easing.InOutSine }
             }
         }
 
@@ -116,10 +118,10 @@ Item {
             visible: tile.safeAlert
 
             SequentialAnimation on opacity {
-                running: tile.safeAlert
+                running: tile.animated && tile.safeAlert
                 loops: Animation.Infinite
-                NumberAnimation { from: 0.05; to: 0.95; duration: 350; easing.type: Easing.InOutSine }
-                NumberAnimation { from: 0.95; to: 0.05; duration: 350; easing.type: Easing.InOutSine }
+                NumberAnimation { from: 0.05; to: 0.95; duration: Math.round(350 * tile.animationInterval / 140); easing.type: Easing.InOutSine }
+                NumberAnimation { from: 0.95; to: 0.05; duration: Math.round(350 * tile.animationInterval / 140); easing.type: Easing.InOutSine }
             }
         }
 
@@ -228,15 +230,17 @@ Item {
             border.width: 2
 
             SequentialAnimation on scale {
+                running: tile.animated && superPrizeVisual.visible
                 loops: Animation.Infinite
-                NumberAnimation { from: 0.92; to: 1.04; duration: 650; easing.type: Easing.InOutSine }
-                NumberAnimation { from: 1.04; to: 0.92; duration: 650; easing.type: Easing.InOutSine }
+                NumberAnimation { from: 0.92; to: 1.04; duration: Math.round(650 * tile.animationInterval / 140); easing.type: Easing.InOutSine }
+                NumberAnimation { from: 1.04; to: 0.92; duration: Math.round(650 * tile.animationInterval / 140); easing.type: Easing.InOutSine }
             }
 
             RotationAnimation on rotation {
+                running: tile.animated && superPrizeVisual.visible
                 from: 45
                 to: 405
-                duration: 5000
+                duration: Math.round(5000 * tile.animationInterval / 140)
                 loops: Animation.Infinite
             }
         }

@@ -4,6 +4,7 @@
 #include <QtQml/qqml.h>
 #include <QUrl>
 #include "src/gameengine.h"
+#include "src/gamesettings.h"
 
 int main(int argc, char *argv[])
 {
@@ -11,6 +12,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName(QStringLiteral("Majorov"));
     QCoreApplication::setApplicationName(QStringLiteral("BoulderDash"));
     qmlRegisterType<GameEngine>("BoulderDash", 1, 0, "GameEngine");
+    qmlRegisterType<GameSettings>("BoulderDash", 1, 0, "GameSettings");
     QQmlApplicationEngine engine;
     const QUrl url(app.arguments().contains(QStringLiteral("--tile-gallery"))
                    ? QStringLiteral("qrc:/examples/TileGallery.qml")

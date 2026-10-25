@@ -10,6 +10,27 @@ GameEngine::GameEngine(QObject *parent) : QObject(parent)
     m_highScore = qMax(0, settings.value(QStringLiteral("highScore"), 0).toInt());
 }
 
+void GameEngine::setPaused(bool paused)
+{
+    if (m_paused == paused) return;
+    m_paused = paused;
+    if (paused) {
+        for (auto it = m_dugTileTimers.cbegin(); it != m_dugTileTimers.cend(); ++it) {
+            if (it.value()->isActive()) {
+                m_pausedDugRemaining.insert(it.key(), qMax(1, it.value()->remainingTime()));
+                it.value()->stop();
+            }
+        }
+    } else {
+        for (auto it = m_pausedDugRemaining.cbegin(); it != m_pausedDugRemaining.cend(); ++it) {
+            if (auto *timer = m_dugTileTimers.value(it.key(), nullptr))
+                timer->start(it.value());
+        }
+        m_pausedDugRemaining.clear();
+    }
+    emit pausedChanged();
+}
+
 void GameEngine::addScore(int points)
 {
     if (points <= 0)
@@ -165,6 +186,7 @@ void GameEngine::loadLevel()
         timer->deleteLater();
     }
     m_dugTileTimers.clear();
+    m_pausedDugRemaining.clear();
     m_fallingCrystalCells.clear();
     m_keyNoticeShownForVisit = false;
     m_keyCollectedNotice = false;
@@ -275,7 +297,7 @@ bool GameEngine::isAdjacentToLockedSafe(int row, int col) const
 
 void GameEngine::generateNextLandscape()
 {
-    if (m_gameOver || hasActiveNotice())
+    if (m_paused || m_gameOver || hasActiveNotice())
         return;
 
     // Seed скрыт от игрока и увеличивается при каждой попытке генерации.
@@ -309,7 +331,7 @@ void GameEngine::generateNextLandscape()
 
 void GameEngine::movePlayer(int dx, int dy)
 {
-    if (m_gameOver || hasActiveNotice()) return;
+    if (m_paused || m_gameOver || hasActiveNotice()) return;
 
     if (dx != 0) m_playerFacingRight = (dx > 0);
 
@@ -491,6 +513,10 @@ void GameEngine::startDugTileTimer(int row, int col)
     timer->setSingleShot(true);
     m_dugTileTimers.insert(tileKey, timer);
     connect(timer, &QTimer::timeout, this, [this, row, col, tileKey, timer]() {
+        if (m_paused) {
+            m_pausedDugRemaining.insert(tileKey, 1);
+            return;
+        }
         m_dugTileTimers.remove(tileKey);
         if (m_gameOver) {
             timer->deleteLater();
@@ -516,14 +542,15 @@ void GameEngine::startDugTileTimer(int row, int col)
         }
         timer->deleteLater();
     });
-    timer->start(15000);
+    if (m_paused) m_pausedDugRemaining.insert(tileKey, 15000);
+    else timer->start(15000);
 }
 
 void GameEngine::dig()
 {
     // Сбор всех обязательных Призов открывает выход, но не блокирует действия
     // игрока на текущем уровне до фактического перехода.
-    if (m_gameOver || hasActiveNotice()) return;
+    if (m_paused || m_gameOver || hasActiveNotice()) return;
 
     int dx = m_playerFacingRight ? 1 : -1;
     int bx = m_playerX + dx;
@@ -548,7 +575,7 @@ void GameEngine::dig()
 
 void GameEngine::updateCrystals()
 {
-    if (m_gameOver || hasActiveNotice())
+    if (m_paused || m_gameOver || hasActiveNotice())
         return;
 
     const bool playerMovedSinceLastUpdate = m_playerMovedSinceCrystalUpdate;
@@ -718,7 +745,7 @@ void GameEngine::loseLife()
 
 void GameEngine::updateGame()
 {
-    if (m_gameOver || m_levelComplete || hasActiveNotice()) return;
+    if (m_paused || m_gameOver || m_levelComplete || hasActiveNotice()) return;
 
     // Простая гравитация игрока: если под ним пустота — падаем.
     QChar below = tileAt(m_playerY + 1, m_playerX);
