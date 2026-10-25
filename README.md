@@ -4,7 +4,7 @@
 
 Исполняемый файл называется `boulderdash`, а C++-тип `GameEngine` регистрируется в QML под URI `BoulderDash`.
 
-> Этот README содержит обзор проекта и справочные заметки. Пошаговые материалы для самостоятельной разработки собраны отдельно: [`LEARNING_01.md`](LEARNING_01.md) → [`LEARNING_02.md`](LEARNING_02.md) → [`LEARNING_03.md`](LEARNING_03.md) → [`LEARNING_04.md`](LEARNING_04.md) → [`LEARNING_05.md`](LEARNING_05.md) → [`LEARNING_06.md`](LEARNING_06.md).
+> Этот README содержит обзор проекта и справочные заметки. Пошаговые материалы для самостоятельной разработки собраны отдельно: [`LEARNING_01.md`](docs/LEARNING_01.md) → [`LEARNING_02.md`](docs/LEARNING_02.md) → [`LEARNING_03.md`](docs/LEARNING_03.md) → [`LEARNING_04.md`](docs/LEARNING_04.md) → [`LEARNING_05.md`](docs/LEARNING_05.md) → [`LEARNING_06.md`](docs/LEARNING_06.md) → [`LEARNING_07.md`](docs/LEARNING_07.md).
 
 ---
 
@@ -114,7 +114,7 @@ cmake --build build-qt5 --parallel 2
 ctest --test-dir build-qt5 --output-on-failure
 ```
 
-Руководство по игровым тестам: [`LEARNING_04.md`](LEARNING_04.md), по тайлам и Персонажам: [`LEARNING_05.md`](LEARNING_05.md), по настройкам, меню и паузе: [`LEARNING_06.md`](LEARNING_06.md).
+Руководство по игровым тестам: [`LEARNING_04.md`](docs/LEARNING_04.md), по тайлам и Персонажам: [`LEARNING_05.md`](docs/LEARNING_05.md), по настройкам, меню и паузе: [`LEARNING_06.md`](docs/LEARNING_06.md).
 
 ### Галерея без запуска игры
 
@@ -158,18 +158,22 @@ cmake -S . -B build-qt5 -G Ninja -DCMAKE_PREFIX_PATH=/opt/Qt/5.15.2/gcc_64
 
 ## Структура проекта
 
+Учебные материалы находятся в `docs/`. [LEARNING_07.md](docs/LEARNING_07.md) подробно разбирает неподключённый Level6, недопустимые символы, отсутствие обратного выхода и предлагаемые исправления. Исправления из разбора пока не внесены в игру.
+
 ```
 .
 ├── CMakeLists.txt              # Сборка под Qt 5.15 и список исходников
 ├── main.cpp                    # Создание приложения и регистрация GameEngine
 ├── qml.qrc                     # QML, шрифт и выбранные PNG в ресурсах приложения
 ├── build_and_run.sh            # Настройка, сборка и запуск
-├── LEARNING_01.md              # Учебная часть 1
-├── LEARNING_02.md              # Учебная часть 2
-├── LEARNING_03.md              # Руководство по генератору
-├── LEARNING_04.md              # Qt Test и CTest для логики игры
-├── LEARNING_05.md              # Связь C++/QML, библиотека тайлов и варианты Персонажа
-├── LEARNING_06.md              # QSettings, начальное меню и пауза игровых таймеров
+├── docs/                      # Учебные Markdown-материалы проекта
+│   ├── LEARNING_01.md          # Основы C++/Qt/QML
+│   ├── LEARNING_02.md          # Архитектура и игровые правила
+│   ├── LEARNING_03.md          # Генератор пейзажей
+│   ├── LEARNING_04.md          # Qt Test и CTest
+│   ├── LEARNING_05.md          # Библиотека тайлов и варианты Персонажа
+│   ├── LEARNING_06.md          # Настройки, меню и пауза
+│   └── LEARNING_07.md          # Разбор ошибок подключения Level6
 ├── src/
 │   ├── gamesettings.h/.cpp     # Проверка, сохранение и уведомления настроек
 │   ├── gameengine.h/.cpp       # Игровое состояние, модели и игровые правила
@@ -282,7 +286,7 @@ Tiles.BrickTile {
 
 Внизу галереи есть сравнение Персонажей. Общие кнопки размера и анимации действуют также на них; переключатели `idle/run/climb/dig/fall` и направления меняют только предпросмотр.
 
-Подробный разбор контрактов, кадров и добавления нового героя находится в [`LEARNING_05.md`](LEARNING_05.md).
+Подробный разбор контрактов, кадров и добавления нового героя находится в [`LEARNING_05.md`](docs/LEARNING_05.md).
 
 ### Настройки и пауза
 
@@ -294,7 +298,7 @@ Tiles.BrickTile {
 
 После настроек из меню игра остаётся на паузе; после настроек из игрового поля — продолжается. Новая игра сбрасывает прохождение, сохраняя оформление. Для завершения приложения откройте меню и выберите «Выход».
 
-Учебный этап: [LEARNING_06.md](LEARNING_06.md). Снимок настроек сохранён локально на H2 в `/home/majorov/docs/QML-settings.png` и не входит в репозиторий.
+Учебный этап: [LEARNING_06.md](docs/LEARNING_06.md). Учебные Markdown-файлы хранятся в `docs/`. Снимок настроек сохранён локально на H2 в `/home/majorov/docs/QML-settings.png` и не входит в репозиторий.
 
 ## Проверки
 

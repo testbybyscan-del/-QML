@@ -1,6 +1,6 @@
 # LEARNING_06.md — настройки, сохранение оформления и настоящая пауза
 
-Продолжение [LEARNING_05](LEARNING_05.md) для проекта [Boulder Dash](README.md). Исходники находятся в `/home/majorov/DEV/QML`.
+Продолжение [LEARNING_05](LEARNING_05.md) для проекта [Boulder Dash](../README.md). Исходники находятся в `/home/majorov/DEV/QML`.
 
 ## Результат этапа
 
@@ -21,7 +21,7 @@
 | `SettingsPanel.qml` | Управление настройками и визуальный предпросмотр |
 | `MenuButton.qml` | Общая кнопка, подпись и сигнал `clicked` |
 
-Исходники: [gamesettings.h](src/gamesettings.h), [gamesettings.cpp](src/gamesettings.cpp), [gameengine.h](src/gameengine.h), [gameengine.cpp](src/gameengine.cpp), [main.qml](qml/main.qml).
+Исходники: [gamesettings.h](../src/gamesettings.h), [gamesettings.cpp](../src/gamesettings.cpp), [gameengine.h](../src/gameengine.h), [gameengine.cpp](../src/gameengine.cpp), [main.qml](../qml/main.qml).
 
 Настройки не принадлежат игровому движку: изменение темы не является ходом игрока. Меню не создаёт второй экземпляр GameEngine. Объект GameSettings создаётся в корне QML, а экран получает ссылку на него через типизированное свойство.
 
