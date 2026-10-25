@@ -4,7 +4,7 @@
 
 Исполняемый файл называется `boulderdash`, а C++-тип `GameEngine` регистрируется в QML под URI `BoulderDash`.
 
-> Этот README содержит обзор проекта и справочные заметки. Пошаговые материалы для самостоятельной разработки собраны отдельно: [`LEARNING_01.md`](LEARNING_01.md) → [`LEARNING_02.md`](LEARNING_02.md) → [`LEARNING_03.md`](LEARNING_03.md) → [`LEARNING_04.md`](LEARNING_04.md) → [`LEARNING_05.md`](LEARNING_05.md).
+> Этот README содержит обзор проекта и справочные заметки. Пошаговые материалы для самостоятельной разработки собраны отдельно: [`LEARNING_01.md`](LEARNING_01.md) → [`LEARNING_02.md`](LEARNING_02.md) → [`LEARNING_03.md`](LEARNING_03.md) → [`LEARNING_04.md`](LEARNING_04.md) → [`LEARNING_05.md`](LEARNING_05.md) → [`LEARNING_06.md`](LEARNING_06.md).
 
 ---
 
@@ -114,7 +114,7 @@ cmake --build build-qt5 --parallel 2
 ctest --test-dir build-qt5 --output-on-failure
 ```
 
-Руководство по игровым тестам: [`LEARNING_04.md`](LEARNING_04.md), по тайлам и Персонажам: [`LEARNING_05.md`](LEARNING_05.md).
+Руководство по игровым тестам: [`LEARNING_04.md`](LEARNING_04.md), по тайлам и Персонажам: [`LEARNING_05.md`](LEARNING_05.md), по настройкам, меню и паузе: [`LEARNING_06.md`](LEARNING_06.md).
 
 ### Галерея без запуска игры
 
@@ -169,6 +169,7 @@ cmake -S . -B build-qt5 -G Ninja -DCMAKE_PREFIX_PATH=/opt/Qt/5.15.2/gcc_64
 ├── LEARNING_03.md              # Руководство по генератору
 ├── LEARNING_04.md              # Qt Test и CTest для логики игры
 ├── LEARNING_05.md              # Связь C++/QML, библиотека тайлов и варианты Персонажа
+├── LEARNING_06.md              # QSettings, начальное меню и пауза игровых таймеров
 ├── src/
 │   ├── gamesettings.h/.cpp     # Проверка, сохранение и уведомления настроек
 │   ├── gameengine.h/.cpp       # Игровое состояние, модели и игровые правила
@@ -293,7 +294,7 @@ Tiles.BrickTile {
 
 После настроек из меню игра остаётся на паузе; после настроек из игрового поля — продолжается. Новая игра сбрасывает прохождение, сохраняя оформление. Для завершения приложения откройте меню и выберите «Выход».
 
-Учебный этап `LEARNING_06.md` сохранён локально на H2 в `/home/majorov/docs/LEARNING_06.md`, снимок настроек — `/home/majorov/docs/QML-settings.png`. Эти файлы находятся вне репозитория согласно правилу хранения новых документов.
+Учебный этап: [LEARNING_06.md](LEARNING_06.md). Снимок настроек сохранён локально на H2 в `/home/majorov/docs/QML-settings.png` и не входит в репозиторий.
 
 ## Проверки
 
