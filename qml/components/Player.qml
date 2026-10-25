@@ -5,16 +5,54 @@ Item {
     width: size
     height: size
 
-    // Внешние свойства
     property int size: 32
-    property string state: "idle"       // "idle", "run", "climb", "dig", "fall"
+    property string state: "idle" // idle, run, climb, dig, fall — состояние из GameEngine
     property bool facingRight: true
+    property string variant: "classic"
+    property bool animated: true
+    property int animationFrame: 0
+    readonly property var selectedStyle: styles.style(variant)
+    readonly property string variantLabel: selectedStyle.label
+    readonly property bool usesSprite: selectedStyle.frames.length > 0
+    readonly property int imageStatus: sprite.status
+    readonly property bool moving: state === "run" || state === "climb" || state === "dig"
+    readonly property url spriteSource: {
+        if (!usesSprite) return ""
+        var index = animated && moving ? animationFrame % selectedStyle.frames.length : 0
+        var number = ("0000" + selectedStyle.frames[index]).slice(-4)
+        return "qrc:/assets/tilesets/kenney/pixel-platformer/Tiles/Characters/tile_" + number + ".png"
+    }
 
-    // Запасная отрисовка простыми фигурами (пока нет спрайтов)
-    // Если у вас есть спрайт-лист, замените этот Item на SpriteSequence.
+    PlayerStyles { id: styles }
+    onStateChanged: animationFrame = 0
+    onVariantChanged: animationFrame = 0
+    onAnimatedChanged: animationFrame = 0
+
+    Timer {
+        interval: 140
+        repeat: true
+        running: player.visible && player.animated && player.usesSprite && player.moving
+        onTriggered: player.animationFrame = (player.animationFrame + 1) % player.selectedStyle.frames.length
+    }
+
+    Image {
+        id: sprite
+        objectName: "playerSprite"
+        anchors.fill: parent
+        source: player.spriteSource
+        visible: player.usesSprite
+        fillMode: Image.PreserveAspectFit
+        smooth: false
+        mipmap: false
+        mirror: !player.facingRight
+        // Наклон — визуальное обозначение действия, а не изменение координат движка.
+        rotation: player.state === "dig" ? (player.facingRight ? 12 : -12)
+                  : player.state === "fall" ? (player.facingRight ? 6 : -6) : 0
+    }
+
     Item {
         anchors.fill: parent
-
+        visible: !player.usesSprite
         Rectangle {
             anchors.centerIn: parent
             width: parent.width * 0.7
@@ -23,60 +61,13 @@ Item {
             color: player.state === "dig" ? "#ffa500" : "#32cd32"
             border.color: "black"
             border.width: 1
-
-            // Условный "глаз" для указания направления
             Rectangle {
-                width: 4; height: 4
-                radius: 2
+                width: player.size / 8; height: width
+                radius: width / 2
                 color: "black"
                 anchors.verticalCenter: parent.verticalCenter
-                x: player.facingRight ? parent.width - 8 : 4
+                x: player.facingRight ? parent.width - player.size / 4 : player.size / 8
             }
         }
-    }
-
-    // Пример SpriteSequence — раскомментируйте, когда будут спрайты.
-    /*
-    SpriteSequence {
-        anchors.fill: parent
-        width: player.size
-        height: player.size
-
-        Sprite {
-            name: "idle"
-            source: "qrc:/assets/images/player_idle.png"
-            frameCount: 1
-            frameRate: 1
-        }
-        Sprite {
-            name: "run"
-            source: "qrc:/assets/images/player_run.png"
-            frameCount: 4
-            frameRate: 10
-        }
-        Sprite {
-            name: "climb"
-            source: "qrc:/assets/images/player_climb.png"
-            frameCount: 2
-            frameRate: 5
-        }
-        Sprite {
-            name: "dig"
-            source: "qrc:/assets/images/player_dig.png"
-            frameCount: 3
-            frameRate: 8
-        }
-        Sprite {
-            name: "fall"
-            source: "qrc:/assets/images/player_fall.png"
-            frameCount: 2
-            frameRate: 8
-        }
-    }
-    */
-
-    // Реагируем на смену состояния — переключаем анимацию
-    onStateChanged: {
-        // playerSprite.jumpTo(state)
     }
 }

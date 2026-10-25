@@ -53,4 +53,18 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME gameengine COMMAND test_gameengine)
+    add_executable(test_tilelibrary
+        tests/test_tilelibrary.cpp
+        src/gameengine.cpp
+        src/gameengine.h
+        src/landscapegenerator.cpp
+        src/landscapegenerator.h
+        ${QML_RESOURCES}
+    )
+    target_link_libraries(test_tilelibrary PRIVATE
+        Qt5::Core Qt5::Gui Qt5::Quick Qt5::Qml Qt5::Test
+    )
+    add_test(NAME tilelibrary COMMAND test_tilelibrary)
+    set_tests_properties(tilelibrary PROPERTIES ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
 endif()

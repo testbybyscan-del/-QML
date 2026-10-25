@@ -12,7 +12,9 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationName(QStringLiteral("BoulderDash"));
     qmlRegisterType<GameEngine>("BoulderDash", 1, 0, "GameEngine");
     QQmlApplicationEngine engine;
-    const QUrl url(QStringLiteral("qrc:/main.qml"));
+    const QUrl url(app.arguments().contains(QStringLiteral("--tile-gallery"))
+                   ? QStringLiteral("qrc:/examples/TileGallery.qml")
+                   : QStringLiteral("qrc:/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
         if (!obj && url == objUrl)

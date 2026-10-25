@@ -14,6 +14,9 @@ Window {
     title: qsTr("Boulder Dash")
     color: "#111827"
 
+    property string playerVariant: "classic"
+    PlayerStyles { id: playerStyles }
+    property string tileTheme: "classic"
     readonly property int tileSize: 32
     readonly property string messageFontFamily: zxSpectrumFont.status === FontLoader.Ready
                                                 ? zxSpectrumFont.name : "monospace"
@@ -28,6 +31,12 @@ Window {
     Levels.Level3 { id: level3 }
     Levels.Level4 { id: level4 }
     Levels.Level5 { id: level5 }
+
+    Loader {
+        id: galleryLoader
+        active: false
+        source: "examples/TileGallery.qml"
+    }
 
     GameEngine {
         id: gameEngine
@@ -81,7 +90,48 @@ Window {
 
         Column {
             anchors.centerIn: parent
+            scale: Math.min(1, (gameRoot.width - 32) / width, (gameRoot.height - 32) / height)
             spacing: 20
+
+            Flow {
+                width: board.width
+                spacing: 12
+                Rectangle {
+                    objectName: "playerVariantButton"
+                    width: 236; height: 30; radius: 5; color: "#334155"
+                    Text { anchors.centerIn: parent; text: qsTr("Герой: %1").arg(playerStyles.style(root.playerVariant).label); color: "#f8fafc"; font.pixelSize: 12 }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            root.playerVariant = playerStyles.next(root.playerVariant)
+                            gameRoot.forceActiveFocus()
+                        }
+                    }
+                }
+                Rectangle {
+                    width: 196; height: 30; radius: 5; color: "#334155"
+                    Text { anchors.centerIn: parent; text: qsTr("Тема: %1").arg(root.tileTheme); color: "#f8fafc" }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            root.tileTheme = root.tileTheme === "classic" ? "kenney"
+                                           : root.tileTheme === "kenney" ? "industrial" : "classic"
+                            gameRoot.forceActiveFocus()
+                        }
+                    }
+                }
+                Rectangle {
+                    width: 158; height: 30; radius: 5; color: "#334155"
+                    Text { anchors.centerIn: parent; text: qsTr("Галерея тайлов"); color: "#f8fafc" }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            if (!galleryLoader.active) galleryLoader.active = true
+                            else { galleryLoader.item.show(); galleryLoader.item.raise() }
+                        }
+                    }
+                }
+            }
 
             Row {
                 width: board.width
@@ -128,6 +178,7 @@ Window {
                         x: model.col * root.tileSize
                         y: model.row * root.tileSize
                         size: root.tileSize
+                        theme: root.tileTheme
                         type: model.type
                         hasKey: gameEngine.hasKey
                         safeAlert: model.type === "safe" && !gameEngine.hasKey
@@ -144,6 +195,8 @@ Window {
                 }
 
                 Player {
+                    objectName: "gamePlayer"
+                    variant: root.playerVariant
                     x: gameEngine.playerX * root.tileSize
                     y: gameEngine.playerY * root.tileSize
                     size: root.tileSize

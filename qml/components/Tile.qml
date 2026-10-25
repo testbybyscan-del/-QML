@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import "tiles" as Tiles
 
 Item {
     id: tile
@@ -6,6 +7,8 @@ Item {
     height: size
     clip: true
 
+    property string theme: "classic"
+    property bool animated: true
     property int size: 32
     property string type: "empty"
     property color crystalColor: "#35d6c4"
@@ -15,21 +18,28 @@ Item {
     // Состояние приходит из GameEngine и обновляется вместе со счётчиком.
     property bool exitAvailable: false
 
-    Rectangle {
+    Loader {
         anchors.fill: parent
-        // Выкопанная клетка остаётся проходимой и выглядит как пустое поле.
-        visible: tile.type === "brick"
-        color: "#8b4513"
-        border.color: "#5a2d0c"
-        border.width: 1
-
-        Rectangle {
-            anchors.centerIn: parent
-            width: parent.width - 4
-            height: parent.height / 2 - 2
-            visible: tile.type === "brick"
-            color: "#a0522d"
+        sourceComponent: tile.type === "brick" ? brickComponent
+                         : tile.type === "crystal" ? crystalComponent
+                         : tile.type === "gold" ? prizeComponent : null
+    }
+    Component {
+        id: brickComponent
+        Tiles.BrickTile { cellSize: tile.size; theme: tile.theme; animated: tile.animated }
+    }
+    Component {
+        id: crystalComponent
+        Tiles.CrystalTile {
+            cellSize: tile.size
+            theme: tile.theme
+            animated: tile.animated
+            crystalColor: tile.crystalColor
         }
+    }
+    Component {
+        id: prizeComponent
+        Tiles.PrizeTile { cellSize: tile.size; theme: tile.theme; animated: tile.animated }
     }
 
     Rectangle {
@@ -174,54 +184,6 @@ Item {
             font.pixelSize: tile.size * 0.34
             font.bold: true
             z: 1
-        }
-    }
-
-    Item {
-        anchors.fill: parent
-        visible: tile.type === "crystal"
-
-        Rectangle {
-            anchors.centerIn: parent
-            width: parent.width * 0.62
-            height: parent.height * 0.62
-            rotation: 45
-            color: tile.crystalColor
-            border.color: tile.crystalColor
-            border.width: 2
-
-            Rectangle {
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.margins: 4
-                width: 5
-                height: 5
-                color: "#e5fffc"
-            }
-        }
-    }
-
-    Item {
-        anchors.fill: parent
-        visible: tile.type === "gold"
-
-        Rectangle {
-            anchors.centerIn: parent
-            width: parent.width * 0.58
-            height: parent.height * 0.58
-            rotation: 45
-            color: "#f5c542"
-            border.color: "#fff0a3"
-            border.width: 2
-
-            Rectangle {
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.margins: 4
-                width: 5
-                height: 5
-                color: "#fff8d6"
-            }
         }
     }
 
