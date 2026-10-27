@@ -4,7 +4,7 @@
 
 Исполняемый файл называется `boulderdash`, а C++-тип `GameEngine` регистрируется в QML под URI `BoulderDash`.
 
-> Этот README содержит обзор проекта и справочные заметки. Пошаговые материалы для самостоятельной разработки собраны отдельно: [`LEARNING_01.md`](docs/LEARNING_01.md) → [`LEARNING_02.md`](docs/LEARNING_02.md) → [`LEARNING_03.md`](docs/LEARNING_03.md) → [`LEARNING_04.md`](docs/LEARNING_04.md) → [`LEARNING_05.md`](docs/LEARNING_05.md) → [`LEARNING_06.md`](docs/LEARNING_06.md) → [`LEARNING_07.md`](docs/LEARNING_07.md) → [`LEARNING_08.md`](docs/LEARNING_08.md).
+> Этот README содержит обзор проекта и справочные заметки. Пошаговые материалы для самостоятельной разработки собраны отдельно: [`LEARNING_01.md`](docs/LEARNING_01.md) → [`LEARNING_02.md`](docs/LEARNING_02.md) → [`LEARNING_03.md`](docs/LEARNING_03.md) → [`LEARNING_04.md`](docs/LEARNING_04.md) → [`LEARNING_05.md`](docs/LEARNING_05.md) → [`LEARNING_06.md`](docs/LEARNING_06.md) → [`LEARNING_07.md`](docs/LEARNING_07.md) → [`LEARNING_08.md`](docs/LEARNING_08.md) → [`LEARNING_9.md`](docs/LEARNING_9.md).
 
 ---
 
@@ -171,6 +171,8 @@ cmake -S . -B build-qt5 -G Ninja -DCMAKE_PREFIX_PATH=/opt/Qt/5.15.2/gcc_64
 
 Учебные материалы находятся в `docs/`. [LEARNING_07.md](docs/LEARNING_07.md) сохраняет исторический разбор ошибок подключения Level6. Эти ошибки исправлены: шестая авторская карта подключена, её формат и выходы проверены. [LEARNING_08.md](docs/LEARNING_08.md) описывает результат, запуск с уровня 1–50, исправление генератора и выполненные проверки.
 
+[LEARNING_9.md](docs/LEARNING_9.md) — сводный пополняемый материал о генерации уровней: seed и воспроизводимость, алгоритм построения карт, хранение в памяти и состояние прохождения, тесты и ограничения. Последующие пояснения и результаты работ по генерации добавляются в этот документ с сохранением истории.
+
 ```
 .
 ├── CMakeLists.txt              # Сборка под Qt 5.15 и список исходников
@@ -185,7 +187,8 @@ cmake -S . -B build-qt5 -G Ninja -DCMAKE_PREFIX_PATH=/opt/Qt/5.15.2/gcc_64
 │   ├── LEARNING_05.md          # Библиотека тайлов и варианты Персонажа
 │   ├── LEARNING_06.md          # Настройки, меню и пауза
 │   ├── LEARNING_07.md          # Исторический разбор ошибок подключения Level6
-│   └── LEARNING_08.md          # Исправления Level6 и запуск --level 1–50
+│   ├── LEARNING_08.md          # Исправления Level6 и запуск --level 1–50
+│   └── LEARNING_9.md           # Пополняемый разбор генерации, seed, хранения и проверок
 ├── src/
 │   ├── gamesettings.h/.cpp     # Проверка, сохранение и уведомления настроек
 │   ├── gameengine.h/.cpp       # Игровое состояние, модели и игровые правила
