@@ -114,6 +114,7 @@ void GameEngine::initializeLevels(const QVariantList &authoredLevels)
     m_levelSnapshots.clear();
     m_levelSnapshots.resize(m_levels.size());
     m_currentLevel = 1;
+    m_firstPlayableLevel = 1;
     m_playerMovedSinceCrystalUpdate = false;
     loadLevel();
 }
@@ -148,6 +149,7 @@ bool GameEngine::startAtLevel(int level)
     m_levelSnapshots.clear();
     m_levelSnapshots.resize(m_levels.size());
     m_currentLevel = level;
+    m_firstPlayableLevel = level;
     m_landscapeSeed = seed;
     m_score = 0;
     m_prizesLeft = 0;
@@ -484,7 +486,8 @@ void GameEngine::movePlayer(int dx, int dy)
         emit playerStateChanged();
 
         if (m_playerY == m_rows - 2 && m_playerX == 1
-                && tileAt(m_playerY, m_playerX) == 'X' && m_currentLevel > 1) {
+                && tileAt(m_playerY, m_playerX) == 'X'
+                && m_currentLevel > m_firstPlayableLevel) {
             switchToLevel(m_currentLevel - 1);
         } else if (m_playerY == m_rows - 2 && m_playerX == m_columns - 2
                    && tileAt(m_playerY, m_playerX) == 'X' && m_prizesLeft == 0) {
@@ -511,7 +514,7 @@ void GameEngine::saveCurrentLevel()
 
 void GameEngine::switchToLevel(int targetLevel)
 {
-    if (targetLevel < 1 || targetLevel > m_levels.size()
+    if (targetLevel < m_firstPlayableLevel || targetLevel > m_levels.size()
             || targetLevel == m_currentLevel || m_gameOver || hasActiveNotice())
         return;
 

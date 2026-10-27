@@ -254,6 +254,43 @@ private slots:
         QCOMPARE(warnings.count(), 0);
     }
 
+    void testStartKeepsLeftExitUnavailableAfterCollectingPrizes()
+    {
+        QQmlApplicationEngine engine;
+        engine.load(QUrl("qrc:/main.qml"));
+        QCOMPARE(engine.rootObjects().size(), 1);
+        QObject *root = engine.rootObjects().first();
+        auto *game = root->findChild<GameEngine *>();
+        QVERIFY(game);
+        QVariantList rows;
+        for (const auto &row : {"#########", "#.......#", "#.......#", "#X.P...X#", "#########"})
+            rows.append(QString::fromLatin1(row));
+        QVariantList levels;
+        for (int index = 0; index < 6; ++index)
+            levels.append(QVariant::fromValue(rows));
+        game->initializeLevels(levels);
+        QVERIFY(game->startAtLevel(6));
+        QCOMPARE(game->prizesLeft(), 0);
+        QCoreApplication::processEvents();
+        auto *window = qobject_cast<QQuickWindow *>(root);
+        QVERIFY(window);
+        QList<QQuickItem *> pending{window->contentItem()};
+        int exits = 0;
+        while (!pending.isEmpty()) {
+            auto *item = pending.takeLast();
+            pending.append(item->childItems());
+            if (item->property("type").toString() != "exit")
+                continue;
+            ++exits;
+            const bool left = qRound(item->x()) == 32;
+            QCOMPARE(item->property("exitAvailable").toBool(), !left);
+        }
+        QCOMPARE(exits, 2);
+        QVERIFY(QMetaObject::invokeMethod(root, "newGame"));
+        QCOMPARE(game->currentLevel(), 1);
+        QVERIFY(!game->canGoBack());
+    }
+
     void gameChangesThemeWithoutChangingState()
     {
         QQmlApplicationEngine engine;

@@ -180,13 +180,13 @@ private slots:
                 }
             }
         }
-        if (level == 50) {
+        if (level > 1) {
             game.setPaused(false);
             game.movePlayer(-1, 0);
             game.movePlayer(-1, 0);
-            QCOMPARE(game.currentLevel(), 49);
-            const auto previous = LandscapeGenerator::generate(43);
-            QCOMPARE(game.prizesLeft(), countPrizes(QStringList(previous.begin(), previous.end())));
+            QCOMPARE(game.currentLevel(), level);
+            QCOMPARE(game.prizesLeft(), countPrizes(expected));
+            QCOMPARE(changed.count(), 1); // нижние карты не загружались
         }
         game.restartGame();
         QCOMPARE(game.currentLevel(), 1);
@@ -222,6 +222,106 @@ private slots:
         QCOMPARE(game.prizesLeft(), 1);
         QCOMPARE(game.playerX(), 2);
         QVERIFY(game.paused());
+    }
+
+    void testStartBlocksEarlierMapsAndPreservesForwardProgress()
+    {
+        auto rows = emptyLevel();
+        setCell(rows, 3, 2, '.');
+        setCell(rows, 5, 3, 'P');
+        setCell(rows, 4, 4, '$');
+        QVariantList levels;
+        for (int number = 1; number <= 7; ++number)
+            levels.append(QVariant::fromValue(asVariantRows(rows)));
+
+        GameEngine game;
+        game.initializeLevels(levels);
+        QVERIFY(game.startAtLevel(6));
+        QVERIFY(!game.canGoBack());
+
+        game.movePlayer(-1, 0);
+        game.movePlayer(-1, 0); // левый выход стартового уровня
+        QCOMPARE(game.currentLevel(), 6);
+        QCOMPARE(game.prizesLeft(), 1);
+        QCOMPARE(game.score(), 0);
+
+        for (int step = 0; step < 6; ++step)
+            game.movePlayer(1, 0); // правый выход до сбора Приза
+        QCOMPARE(game.currentLevel(), 6);
+        QVERIFY(!game.levelComplete());
+
+        game.movePlayer(0, -1);
+        for (int step = 0; step < 3; ++step)
+            game.movePlayer(-1, 0); // Приз в (4, 4)
+        QCOMPARE(game.prizesLeft(), 0);
+        QCOMPARE(game.score(), 100);
+        QVERIFY(game.levelComplete());
+        game.movePlayer(0, 1);
+        for (int step = 0; step < 3; ++step)
+            game.movePlayer(1, 0);
+        QCOMPARE(game.currentLevel(), 7);
+        QVERIFY(game.canGoBack());
+        QCOMPARE(game.prizesLeft(), 1);
+
+        game.movePlayer(-1, 0);
+        game.movePlayer(-1, 0); // возврат к уже пройденному тестовому экрану
+        QCOMPARE(game.currentLevel(), 6);
+        QVERIFY(!game.canGoBack());
+        QCOMPARE(game.playerX(), 7);
+        QCOMPARE(game.prizesLeft(), 0);
+        QCOMPARE(game.score(), 100);
+        QCOMPARE(tileTypeAt(game, 4, 4), QString("empty"));
+
+        for (int step = 0; step < 6; ++step)
+            game.movePlayer(-1, 0);
+        QCOMPARE(game.currentLevel(), 6); // граница сохраняется после возврата
+        QCOMPARE(game.prizesLeft(), 0);
+        for (int step = 0; step < 6; ++step)
+            game.movePlayer(1, 0);
+        QCOMPARE(game.currentLevel(), 7); // повторный выход вперёд доступен
+        QCOMPARE(game.prizesLeft(), 1);
+        QCOMPARE(game.score(), 100);
+    }
+
+    void testStartBoundarySurvivesInvalidRequestsAndResetsWithNewSession()
+    {
+        auto rows = emptyLevel();
+        setCell(rows, 3, 2, '.');
+        setCell(rows, 5, 3, 'P');
+        QVariantList levels;
+        for (int number = 1; number <= 7; ++number)
+            levels.append(QVariant::fromValue(asVariantRows(rows)));
+
+        GameEngine game;
+        game.initializeLevels(levels);
+        QVERIFY(game.startAtLevel(6));
+        for (int invalid : {0, 51}) {
+            QVERIFY(!game.startAtLevel(invalid));
+            const int steps = game.playerX() - 1;
+            for (int step = 0; step < steps; ++step)
+                game.movePlayer(-1, 0);
+            QCOMPARE(game.currentLevel(), 6);
+            game.movePlayer(1, 0); // выйти с портала перед следующей проверкой
+        }
+
+        game.restartGame();
+        QCOMPARE(game.currentLevel(), 1);
+        for (int step = 0; step < 4; ++step)
+            game.movePlayer(1, 0);
+        QCOMPARE(game.currentLevel(), 2);
+        game.movePlayer(-1, 0);
+        game.movePlayer(-1, 0);
+        QCOMPARE(game.currentLevel(), 1); // обычный возврат 2 → 1 восстановлен
+
+        QVERIFY(game.startAtLevel(6));
+        game.initializeLevels(levels);
+        QCOMPARE(game.currentLevel(), 1);
+        for (int step = 0; step < 4; ++step)
+            game.movePlayer(1, 0);
+        QCOMPARE(game.currentLevel(), 2);
+        game.movePlayer(-1, 0);
+        game.movePlayer(-1, 0);
+        QCOMPARE(game.currentLevel(), 1); // повторная инициализация снимает границу
     }
 
     void pauseBlocksInputPhysicsAndPreservesPitTime()

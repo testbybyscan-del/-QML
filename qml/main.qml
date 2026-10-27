@@ -223,7 +223,8 @@ Window {
                         safeAlert: model.type === "safe" && !gameEngine.hasKey
                                    && Math.abs(gameEngine.playerX - model.col)
                                       + Math.abs(gameEngine.playerY - model.row) === 1
-                        exitAvailable: gameEngine.prizesLeft === 0
+                        exitAvailable: model.row === gameEngine.rows - 2 && model.col === 1
+                                       ? gameEngine.canGoBack : gameEngine.prizesLeft === 0
                         crystalColor: gameEngine.currentLevel === 2
                                       ? "#db4f9b"
                                       : gameEngine.currentLevel === 3 ? "#38bdf8"
@@ -248,7 +249,11 @@ Window {
 
             Text {
                 width: board.width
-                text: gameEngine.currentLevel === 2
+                text: gameEngine.currentLevel > 1 && !gameEngine.canGoBack
+                      ? gameEngine.prizesLeft === 0
+                        ? qsTr("Все Призы собраны. Правый выход ведёт дальше. Возврат ниже стартового уровня теста недоступен.")
+                        : qsTr("Соберите все Призы, чтобы открыть правый выход. Возврат ниже стартового уровня теста недоступен.")
+                      : gameEngine.currentLevel === 2
                       ? gameEngine.hasKey
                         ? qsTr("Ключ найден. Откройте Сейф B на этом уровне (строка 8, столбец 10).")
                         : qsTr("На этом уровне Сейф B (строка 8, столбец 10). Ключ находится на уровне 4.")
@@ -257,8 +262,10 @@ Window {
                           ? qsTr("Ключ подобран. Вернитесь через левый выход на уровень 2 к Сейфу.")
                           : qsTr("Подберите Ключ K (строка 10, столбец 15), затем вернитесь на уровень 2 к Сейфу.")
                         : gameEngine.prizesLeft === 0
-                      ? qsTr("Все Призы собраны. Дойдите до выхода в правом нижнем углу, чтобы продолжить. Нижний левый угол — назад")
-                      : gameEngine.currentLevel > 1
+                      ? gameEngine.canGoBack
+                        ? qsTr("Все Призы собраны. Дойдите до выхода в правом нижнем углу, чтобы продолжить. Нижний левый угол — назад")
+                        : qsTr("Все Призы собраны. Дойдите до выхода в правом нижнем углу, чтобы продолжить.")
+                      : gameEngine.canGoBack
                         ? qsTr("Соберите все призы: стрелки/WASD — движение, пробел — копать. Нижний левый угол — предыдущий экран, нижний правый — следующий после сбора всех призов")
                         : qsTr("Соберите все Призы: стрелки/WASD — движение, пробел — копать, Esc/P — пауза")
                 color: "#cbd5e1"
