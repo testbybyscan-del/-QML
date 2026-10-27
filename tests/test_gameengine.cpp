@@ -7,7 +7,10 @@
 #include <QSignalSpy>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QPoint>
+#include <QSet>
 #include <QtTest>
+#include <limits>
 
 namespace {
 
@@ -64,6 +67,43 @@ int countPrizes(const QStringList &rows)
     return count;
 }
 
+QVector<int> walkingDistances(const QVector<QString> &rows, QPoint start)
+{
+    const int width = rows.first().size();
+    QVector<int> distances(rows.size() * width, -1);
+    QVector<QPoint> pending{start};
+    distances[start.y() * width + start.x()] = 0;
+    const QPoint directions[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for (int index = 0; index < pending.size(); ++index) {
+        const QPoint current = pending[index];
+        for (const auto &direction : directions) {
+            const QPoint next = current + direction;
+            if (next.y() < 0 || next.y() >= rows.size()
+                    || next.x() < 0 || next.x() >= width)
+                continue;
+            const int key = next.y() * width + next.x();
+            if (distances[key] >= 0 || rows[next.y()][next.x()] == '#'
+                    || rows[next.y()][next.x()] == 'C')
+                continue;
+            distances[key] = distances[current.y() * width + current.x()] + 1;
+            pending.append(next);
+        }
+    }
+    return distances;
+}
+
+QVector<quint32> generatedMapSeeds()
+{
+    QVector<quint32> seeds;
+    for (quint32 seed = 1; seed <= 256; ++seed)
+        seeds.append(seed);
+    seeds.append(0);
+    seeds.append(std::numeric_limits<quint32>::max());
+    seeds.append(0x9E3779B9u);
+    seeds.append(2026);
+    return seeds;
+}
+
 QString tileTypeAt(GameEngine &game, int row, int column)
 {
     TileModel *model = game.tilesModel();
@@ -100,21 +140,38 @@ private slots:
 
     void generatedRouteIsReproducibleAndObjectsHaveSupports()
     {
-        // 44 карты нужны для старта с уровня 50; seed 45 нужен
-        // при следующем обычном переходе через правый выход.
-        for (quint32 seed = 1; seed <= 45; ++seed) {
+        QSet<QString> differentMaps;
+        QSet<QString> differentLandscapes;
+        const auto seeds = generatedMapSeeds();
+        for (quint32 seed : seeds) {
             QString error;
             const auto rows = LandscapeGenerator::generate(seed, &error);
             QVERIFY2(!rows.isEmpty(), qPrintable(QString("seed %1: %2").arg(seed).arg(error)));
             QCOMPARE(rows, LandscapeGenerator::generate(seed));
             QCOMPARE(rows.size(), 13);
             int crystals = 0;
+            int players = 0;
+            int prizes = 0;
+            int exits = 0;
+            int superPrizes = 0;
+            QString serialized;
+            QString landscape;
             for (int row = 0; row < rows.size(); ++row) {
                 QCOMPARE(rows[row].size(), 20);
+                serialized += rows[row] + '\n';
                 for (int col = 0; col < rows[row].size(); ++col) {
                     const QChar tile = rows[row][col];
+                    QVERIFY2(QStringLiteral("#.PXCx$S").contains(tile),
+                             qPrintable(QString("seed %1: unsupported tile").arg(seed)));
+                    landscape += tile == '#' ? '#' : '.';
+                    if (row == 0 || row == 12 || col == 0 || col == 19)
+                        QCOMPARE(tile, QChar('#'));
                     if (tile == 'C')
                         ++crystals;
+                    players += tile == 'P';
+                    prizes += tile == '$';
+                    exits += tile == 'X';
+                    superPrizes += tile == 'S';
                     if (tile == 'C' || tile == '$' || tile == 'S') {
                         QVERIFY(row + 1 < rows.size());
                         QCOMPARE(rows[row + 1][col], QChar('#'));
@@ -122,7 +179,67 @@ private slots:
                 }
             }
             QCOMPARE(crystals, 20);
+            QCOMPARE(players, 1);
+            QCOMPARE(prizes, 5);
+            QCOMPARE(exits, 2);
+            QVERIFY(superPrizes <= 1);
+            QCOMPARE(rows[11][1], QChar('X'));
+            QCOMPARE(rows[11][2], QChar('x'));
+            QCOMPARE(rows[11][3], QChar('P'));
+            QCOMPARE(rows[10][3], QChar('.'));
+            QCOMPARE(rows[11][17], QChar('x'));
+            QCOMPARE(rows[11][18], QChar('X'));
+            QCOMPARE(rows[11][7], QChar('#'));
+            QCOMPARE(rows[11][8], QChar('$'));
+            QCOMPARE(rows[11][9], QChar('#'));
+
+            // Раньше правая нижняя комната была целиком открыта.
+            // Теперь в ней обязательны хотя бы две вертикальные перегородки,
+            // а не только случайное изменение позиции предметов на полках.
+            int lowerRoomBricks = 0;
+            int verticalPartitions = 0;
+            for (int col = 10; col <= 16; ++col) {
+                lowerRoomBricks += rows[9][col] == '#';
+                lowerRoomBricks += rows[10][col] == '#';
+                verticalPartitions += rows[9][col] == '#' && rows[10][col] == '#';
+            }
+            QVERIFY2(lowerRoomBricks >= 4,
+                     qPrintable(QString("seed %1: lower room still lacks obstacles").arg(seed)));
+            QVERIFY2(verticalPartitions >= 2,
+                     qPrintable(QString("seed %1: lower room has no vertical partitions").arg(seed)));
+
+            const auto distances = walkingDistances(rows, QPoint(3, 11));
+            QVERIFY2(distances[11 * 20 + 1] >= 0 && distances[11 * 20 + 18] >= 0,
+                     qPrintable(QString("seed %1: exits not connected to start").arg(seed)));
+            QVERIFY2(distances[11 * 20 + 18] >= 23,
+                     qPrintable(QString("seed %1: lower partition does not require a detour").arg(seed)));
+            QVERIFY2(distances[10 * 20 + 6] >= 0,
+                     qPrintable(QString("seed %1: digging approach is blocked").arg(seed)));
+            for (int row = 1; row < 12; ++row) {
+                for (int col = 1; col < 19; ++col) {
+                    const QChar tile = rows[row][col];
+                    if ((tile == '$' || tile == 'S') && !(row == 11 && col == 8))
+                        QVERIFY2(distances[row * 20 + col] >= 0,
+                                 qPrintable(QString("seed %1: unreachable reward at %2,%3")
+                                                .arg(seed).arg(row).arg(col)));
+                    if (tile == 'C') {
+                        const bool pushLeft = distances[row * 20 + col + 1] >= 0
+                                && rows[row][col - 1] == '.';
+                        const bool pushRight = distances[row * 20 + col - 1] >= 0
+                                && rows[row][col + 1] == '.';
+                        QVERIFY2(pushLeft || pushRight,
+                                 qPrintable(QString("seed %1: no push approach at %2,%3")
+                                                .arg(seed).arg(row).arg(col)));
+                    }
+                }
+            }
+            differentMaps.insert(serialized);
+            differentLandscapes.insert(landscape);
         }
+        // Объекты и кирпичная геометрия должны меняться между seed:
+        // одного фиксированного шаблона с переставленными наградами недостаточно.
+        QVERIFY(differentMaps.size() >= seeds.size() / 2);
+        QVERIFY(differentLandscapes.size() >= seeds.size() / 2);
     }
 
     void startAtLevelLoadsAuthoredAndGeneratedMaps_data()

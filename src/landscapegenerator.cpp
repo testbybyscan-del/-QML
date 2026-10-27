@@ -404,6 +404,134 @@ bool validateCandidate(const QVector<QString> &map, QString *reason)
     return true;
 }
 
+bool addTerrainPartitions(QVector<QString> &map, quint32 seed, QString *reason)
+{
+    SeededRandom random(seed ^ 0xA511E9B3u);
+    const int targetBricks = 18 + random.bounded(7);
+    int addedBricks = 0;
+
+    // Нижняя стартовая строка остаётся свободной для порталов и кармана.
+    // Первый шаг вверх и позицию для копания не застраиваем даже тогда,
+    // когда статический поиск смог бы найти обходной путь.
+    const auto protectedCell = [](int row, int col) {
+        return row <= 0 || row >= kRows - 2 || col <= 0 || col >= kColumns - 1
+                || (row == 10 && (col == 3 || col == 6));
+    };
+    const auto tryPartition = [&](const QVector<QPoint> &cells) {
+        QVector<QPoint> emptyCells;
+        for (const QPoint &cell : cells) {
+            if (protectedCell(cell.y(), cell.x()))
+                return false;
+            const QChar tile = map[cell.y()][cell.x()];
+            if (tile == QLatin1Char('.'))
+                emptyCells.append(cell);
+            else if (tile != QLatin1Char('#'))
+                return false; // Предметы, старт и выходы не заменяются стеной.
+        }
+        if (emptyCells.isEmpty() || addedBricks + emptyCells.size() > targetBricks)
+            return false;
+
+        auto candidate = map;
+        for (const QPoint &cell : emptyCells)
+            candidate[cell.y()][cell.x()] = QLatin1Char('#');
+        // Проверяем целую перегородку, а не отдельные декоративные клетки:
+        // должны остаться Призы, выходы и хотя бы одна сторона толкания C.
+        if (!validateCandidate(candidate, nullptr))
+            return false;
+        map = candidate;
+        addedBricks += emptyCells.size();
+        return true;
+    };
+
+    // Первая перегородка продолжает правую стенку кармана вверх до строки 8.
+    // Прямого обхода по строке 9 больше нет: статический путь к правому
+    // выходу проходит не ниже строки 7 (минимум 23 шага вместо прежних 19).
+    if (!tryPartition({QPoint(10, 8), QPoint(10, 9), QPoint(10, 10)})) {
+        if (reason)
+            *reason = QStringLiteral("не удалось сохранить обход нижней перегородки");
+        return false;
+    }
+
+    // В прежде пустой нижней правой комнате появляются дополнительные
+    // вертикальные простенки. У порталов сохраняется свободная строка 11.
+    QVector<int> lowerColumns{11, 12, 13, 14, 15, 16};
+    for (int index = lowerColumns.size() - 1; index > 0; --index)
+        lowerColumns.swapItemsAt(index, random.bounded(index + 1));
+    int lowerPartitions = 1;
+    for (int col : lowerColumns) {
+        if (tryPartition({QPoint(col, 9), QPoint(col, 10)}))
+            ++lowerPartitions;
+        if (lowerPartitions == 3)
+            break;
+    }
+    if (lowerPartitions < 2) {
+        if (reason)
+            *reason = QStringLiteral("не удалось построить нижние перегородки");
+        return false;
+    }
+
+    // Продлеваем опоры и создаём короткие стены и угловые ниши в разных
+    // частях карты. Перестановка набора вариантов воспроизводима по seed.
+    const QVector<QPoint> shapes[] = {
+        {QPoint(0, 0), QPoint(0, 1)},
+        {QPoint(0, 0), QPoint(1, 0)},
+        {QPoint(0, 0), QPoint(0, 1), QPoint(0, 2)},
+        {QPoint(0, 0), QPoint(1, 0), QPoint(2, 0)},
+        {QPoint(0, 0), QPoint(0, 1), QPoint(1, 1)},
+        {QPoint(0, 0), QPoint(1, 0), QPoint(1, 1)},
+        {QPoint(0, 0), QPoint(0, 1), QPoint(-1, 1)}
+    };
+    QVector<QVector<QPoint>> partitions;
+    for (int row = 2; row <= 10; ++row) {
+        for (int col = 1; col <= 18; ++col) {
+            for (const auto &shape : shapes) {
+                QVector<QPoint> cells;
+                bool allowed = true;
+                for (const QPoint &offset : shape) {
+                    const QPoint cell = QPoint(col, row) + offset;
+                    if (protectedCell(cell.y(), cell.x())
+                            || (map[cell.y()][cell.x()] != QLatin1Char('.')
+                                && map[cell.y()][cell.x()] != QLatin1Char('#'))) {
+                        allowed = false;
+                        break;
+                    }
+                    cells.append(cell);
+                }
+                if (allowed)
+                    partitions.append(cells);
+            }
+        }
+    }
+    for (int index = partitions.size() - 1; index > 0; --index)
+        partitions.swapItemsAt(index, random.bounded(index + 1));
+    for (const auto &cells : partitions) {
+        tryPartition(cells);
+        if (addedBricks == targetBricks)
+            break;
+    }
+
+    // Одиночные продолжения позволяют закончить стены там, где целая группа
+    // перекрыла бы единственный маршрут. Число вариантов ограничено полем.
+    QVector<QPoint> remainingCells;
+    for (int row = 2; row <= 10; ++row)
+        for (int col = 1; col <= 18; ++col)
+            if (!protectedCell(row, col) && map[row][col] == QLatin1Char('.'))
+                remainingCells.append(QPoint(col, row));
+    for (int index = remainingCells.size() - 1; index > 0; --index)
+        remainingCells.swapItemsAt(index, random.bounded(index + 1));
+    for (const QPoint &cell : remainingCells) {
+        tryPartition({cell});
+        if (addedBricks == targetBricks)
+            break;
+    }
+    if (addedBricks < 12) {
+        if (reason)
+            *reason = QStringLiteral("недостаточно безопасных дополнительных перегородок");
+        return false;
+    }
+    return true;
+}
+
 } // namespace
 
 QVector<QString> LandscapeGenerator::generate(quint32 seed, QString *error)
@@ -415,7 +543,8 @@ QVector<QString> LandscapeGenerator::generate(quint32 seed, QString *error)
         const quint32 attemptSeed = seed + attempt * 0x9E3779B9u;
         QVector<QString> candidate = createCandidate(attemptSeed);
         QString reason;
-        if (validateCandidate(candidate, &reason)) {
+        if (validateCandidate(candidate, &reason)
+                && addTerrainPartitions(candidate, attemptSeed, &reason)) {
             if (error)
                 error->clear();
             return candidate;
