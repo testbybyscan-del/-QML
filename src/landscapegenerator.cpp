@@ -319,13 +319,21 @@ bool validateCandidate(const QVector<QString> &map, QString *reason)
                 ++exitCount;
             }
 
-            // Кристаллы, обычные Призы и Суперприз — подвижные сущности.
-            // На старте под каждым из них должна находиться кирпичная опора,
-            // иначе первый шаг физики может изменить карту ещё до решения игрока.
+            // Верхние Кристаллы колонны опираются на нижние. Призы и
+            // Суперприз по-прежнему требуют собственной кирпичной опоры.
             if (tile == QLatin1Char('C') || tile == QLatin1Char('$')
                     || tile == QLatin1Char('S')) {
-                if (row + 1 >= kRows || map[row + 1][col] != QLatin1Char('#'))
-                    return fail(QStringLiteral("подвижный объект не имеет кирпичной опоры"));
+                if (row + 1 >= kRows || (map[row + 1][col] != QLatin1Char('#')
+                        && !(tile == QLatin1Char('C')
+                             && map[row + 1][col] == QLatin1Char('C'))))
+                    return fail(QStringLiteral("подвижный объект не имеет опоры"));
+                if (tile == QLatin1Char('C') && map[row + 1][col] == QLatin1Char('C')) {
+                    for (int direction : {-1, 1}) {
+                        if (map[row][col + direction] == QLatin1Char('.')
+                                && map[row + 1][col + direction] == QLatin1Char('.'))
+                            return fail(QStringLiteral("колонна Кристаллов осыпается на старте"));
+                    }
+                }
             }
         }
     }
@@ -361,10 +369,10 @@ bool validateCandidate(const QVector<QString> &map, QString *reason)
                     && !reachable.contains(row * kColumns + col))
                 return fail(QStringLiteral("обычный Приз или Суперприз недостижим"));
 
-            if (tile == QLatin1Char('C')) {
-                // Кристалл не собирается, но если он поставлен как толкаемое
-                // препятствие, у игрока должны быть доступная сторона подхода
-                // и свободная клетка назначения хотя бы в одном направлении.
+            if (tile == QLatin1Char('C') && map[row + 1][col] != QLatin1Char('C')) {
+                // Для одиночного C или основания колонны нужны доступная
+                // сторона подхода и пустая клетка назначения. Верхние C
+                // освобождаются падением после сдвига основания.
                 bool canPush = false;
                 for (int direction : {-1, 1}) {
                     const int approachCol = col - direction;
@@ -402,6 +410,96 @@ bool validateCandidate(const QVector<QString> &map, QString *reason)
     }
 
     return true;
+}
+
+int crystalColumnCount(const QVector<QString> &map)
+{
+    int count = 0;
+    for (int row = 1; row < kRows - 1; ++row) {
+        for (int col = 1; col < kColumns - 1; ++col) {
+            if (map[row][col] != QLatin1Char('C') || map[row - 1][col] == QLatin1Char('C'))
+                continue;
+            int bottom = row;
+            while (bottom + 1 < kRows && map[bottom + 1][col] == QLatin1Char('C'))
+                ++bottom;
+            if (bottom - row + 1 >= 3)
+                ++count;
+        }
+    }
+    return count;
+}
+
+bool addCrystalColumns(QVector<QString> &map, quint32 seed, QString *reason)
+{
+    SeededRandom random(seed ^ 0xC2B2AE35u);
+    QVector<QPoint> bases;
+    for (int row : {3, 5, 7})
+        for (int col = 2; col <= 17; ++col)
+            if (map[row][col] == QLatin1Char('C'))
+                bases.append(QPoint(col, row));
+    for (int index = bases.size() - 1; index > 0; --index)
+        bases.swapItemsAt(index, random.bounded(index + 1));
+
+    QVector<int> usedColumns;
+    for (const QPoint &base : bases) {
+        const int row = base.y();
+        const int col = base.x();
+        bool separate = true;
+        for (int used : usedColumns)
+            if (qAbs(used - col) < 3)
+                separate = false;
+        if (!separate || map[row][col] != QLatin1Char('C')
+                || map[row - 1][col] != QLatin1Char('#')
+                || (map[row - 2][col] != QLatin1Char('.')
+                    && map[row - 2][col] != QLatin1Char('C')))
+            continue;
+
+        // Средний ярус закрыт с боков: верхние C не скатываются до того,
+        // как игрок сдвинет основание. После сдвига два верхних C падают
+        // в освобождённую клетку как настоящая вертикальная цепочка.
+        if ((map[row - 1][col - 1] != QLatin1Char('.')
+                && map[row - 1][col - 1] != QLatin1Char('#'))
+                || (map[row - 1][col + 1] != QLatin1Char('.')
+                    && map[row - 1][col + 1] != QLatin1Char('#')))
+            continue;
+        const int required = map[row - 2][col] == QLatin1Char('C') ? 1 : 2;
+        QVector<QPoint> donors;
+        for (int donorRow = 1; donorRow < kRows - 1; ++donorRow) {
+            for (int donorCol = 1; donorCol < kColumns - 1; ++donorCol) {
+                if (map[donorRow][donorCol] != QLatin1Char('C')
+                        || map[donorRow - 1][donorCol] == QLatin1Char('C')
+                        || map[donorRow + 1][donorCol] == QLatin1Char('C')
+                        || (donorCol == col && donorRow >= row - 2 && donorRow <= row))
+                    continue;
+                donors.append(QPoint(donorCol, donorRow));
+            }
+        }
+        for (int index = donors.size() - 1; index > 0; --index)
+            donors.swapItemsAt(index, random.bounded(index + 1));
+        // Разные доноры открывают разные подходы к соседним полкам.
+        // Перебор ограничен четырьмя вариантами на основание.
+        for (int attempt = 0; attempt < 4 && donors.size() >= required; ++attempt) {
+            auto candidate = map;
+            for (int index = 0; index < required; ++index) {
+                const QPoint donor = donors[(attempt * required + index) % donors.size()];
+                candidate[donor.y()][donor.x()] = QLatin1Char('.');
+            }
+            candidate[row - 2][col] = QLatin1Char('C');
+            candidate[row - 1][col] = QLatin1Char('C');
+            candidate[row - 1][col - 1] = QLatin1Char('#');
+            candidate[row - 1][col + 1] = QLatin1Char('#');
+            if (!validateCandidate(candidate, nullptr))
+                continue;
+            map = candidate;
+            usedColumns.append(col);
+            break;
+        }
+        if (crystalColumnCount(map) >= 3)
+            return true;
+    }
+    if (reason)
+        *reason = QStringLiteral("не удалось построить три доступные колонны Кристаллов");
+    return false;
 }
 
 bool addTerrainPartitions(QVector<QString> &map, quint32 seed, QString *reason)
@@ -544,7 +642,9 @@ QVector<QString> LandscapeGenerator::generate(quint32 seed, QString *error)
         QVector<QString> candidate = createCandidate(attemptSeed);
         QString reason;
         if (validateCandidate(candidate, &reason)
-                && addTerrainPartitions(candidate, attemptSeed, &reason)) {
+                && addCrystalColumns(candidate, attemptSeed, &reason)
+                && addTerrainPartitions(candidate, attemptSeed, &reason)
+                && crystalColumnCount(candidate) >= 3) {
             if (error)
                 error->clear();
             return candidate;

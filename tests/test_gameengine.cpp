@@ -11,6 +11,7 @@
 #include <QSet>
 #include <QtTest>
 #include <limits>
+#include <algorithm>
 
 namespace {
 
@@ -116,6 +117,19 @@ QString tileTypeAt(GameEngine &game, int row, int column)
     return {};
 }
 
+QSet<int> tileCells(GameEngine &game, const QString &type)
+{
+    QSet<int> cells;
+    auto *model = game.tilesModel();
+    for (int row = 0; row < model->rowCount(); ++row) {
+        const auto index = model->index(row);
+        if (model->data(index, TileModel::TypeRole).toString() == type)
+            cells.insert(model->data(index, TileModel::RowRole).toInt() * game.columns()
+                         + model->data(index, TileModel::ColRole).toInt());
+    }
+    return cells;
+}
+
 } // namespace
 
 class GameEngineTest : public QObject
@@ -154,6 +168,8 @@ private slots:
             int prizes = 0;
             int exits = 0;
             int superPrizes = 0;
+            int verticalColumns = 0;
+            int columnCrystals = 0;
             QString serialized;
             QString landscape;
             for (int row = 0; row < rows.size(); ++row) {
@@ -172,9 +188,30 @@ private slots:
                     prizes += tile == '$';
                     exits += tile == 'X';
                     superPrizes += tile == 'S';
-                    if (tile == 'C' || tile == '$' || tile == 'S') {
+                    if (tile == '$' || tile == 'S') {
                         QVERIFY(row + 1 < rows.size());
                         QCOMPARE(rows[row + 1][col], QChar('#'));
+                    }
+                    if (tile == 'C') {
+                        QVERIFY(row + 1 < rows.size());
+                        QVERIFY(rows[row + 1][col] == '#' || rows[row + 1][col] == 'C');
+                        if (row == 0 || rows[row - 1][col] != 'C') {
+                            int height = 1;
+                            while (row + height < rows.size() && rows[row + height][col] == 'C')
+                                ++height;
+                            QCOMPARE(rows[row + height][col], QChar('#'));
+                            if (height >= 3) {
+                                ++verticalColumns;
+                                columnCrystals += height;
+                            }
+                        }
+                        if (rows[row + 1][col] == 'C') {
+                            // Верхние Кристаллы стоят на цепочке; боковая
+                            // геометрия должна удерживать её до действия игрока.
+                            for (int direction : {-1, 1})
+                                QVERIFY(!(rows[row][col + direction] == '.'
+                                          && rows[row + 1][col + direction] == '.'));
+                        }
                     }
                 }
             }
@@ -183,6 +220,9 @@ private slots:
             QCOMPARE(prizes, 5);
             QCOMPARE(exits, 2);
             QVERIFY(superPrizes <= 1);
+            QVERIFY2(verticalColumns >= 3,
+                     qPrintable(QString("seed %1: fewer than three tall crystal columns").arg(seed)));
+            QVERIFY(columnCrystals >= 9);
             QCOMPARE(rows[11][1], QChar('X'));
             QCOMPARE(rows[11][2], QChar('x'));
             QCOMPARE(rows[11][3], QChar('P'));
@@ -222,7 +262,7 @@ private slots:
                         QVERIFY2(distances[row * 20 + col] >= 0,
                                  qPrintable(QString("seed %1: unreachable reward at %2,%3")
                                                 .arg(seed).arg(row).arg(col)));
-                    if (tile == 'C') {
+                    if (tile == 'C' && rows[row + 1][col] != 'C') {
                         const bool pushLeft = distances[row * 20 + col + 1] >= 0
                                 && rows[row][col - 1] == '.';
                         const bool pushRight = distances[row * 20 + col - 1] >= 0
@@ -240,6 +280,101 @@ private slots:
         // одного фиксированного шаблона с переставленными наградами недостаточно.
         QVERIFY(differentMaps.size() >= seeds.size() / 2);
         QVERIFY(differentLandscapes.size() >= seeds.size() / 2);
+    }
+
+    void generatedCrystalColumnsFallAfterPushingBase_data()
+    {
+        QTest::addColumn<quint32>("seed");
+        QTest::newRow("first-landscape") << quint32(1);
+        QTest::newRow("landscape-at-level-50") << quint32(44);
+        QTest::newRow("different-layout") << quint32(2026);
+    }
+
+    void generatedCrystalColumnsFallAfterPushingBase()
+    {
+        QFETCH(quint32, seed);
+        QString error;
+        const auto rows = LandscapeGenerator::generate(seed, &error);
+        QVERIFY2(!rows.isEmpty(), qPrintable(error));
+        GameEngine game;
+        initialize(game, QStringList(rows.begin(), rows.end()));
+        const auto initialCrystals = tileCells(game, "crystal");
+        const auto initialGold = tileCells(game, "gold");
+        game.updateCrystals();
+        QCOMPARE(tileCells(game, "crystal"), initialCrystals);
+        QCOMPARE(tileCells(game, "gold"), initialGold);
+        QVERIFY(!game.gameOver());
+
+        const QPoint start(game.playerX(), game.playerY());
+        const auto distances = walkingDistances(rows, start);
+        QPoint base(-1, -1);
+        int direction = 0;
+        for (int row = 3; row < rows.size() - 1 && direction == 0; ++row) {
+            for (int col = 2; col < rows.first().size() - 2 && direction == 0; ++col) {
+                if (rows[row][col] != 'C' || rows[row - 1][col] != 'C'
+                        || rows[row - 2][col] != 'C' || rows[row + 1][col] != '#')
+                    continue;
+                for (int candidate : {-1, 1}) {
+                    if (distances[row * game.columns() + col - candidate] >= 0
+                            && rows[row][col + candidate] == '.') {
+                        base = QPoint(col, row);
+                        direction = candidate;
+                        break;
+                    }
+                }
+            }
+        }
+        QVERIFY2(direction != 0, "No generated column base can be reached and pushed");
+
+        // Восстанавливаем кратчайший маршрут к основанию по независимому BFS.
+        // Физика вызывается отдельно: это проверка причинного эффекта толчка,
+        // а не симуляция полного прохождения уровня с таймерами.
+        QVector<QPoint> route;
+        QPoint cursor(base.x() - direction, base.y());
+        const QPoint steps[] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        while (cursor != start) {
+            route.append(cursor);
+            const int distance = distances[cursor.y() * game.columns() + cursor.x()];
+            bool found = false;
+            for (const auto &step : steps) {
+                const QPoint previous = cursor + step;
+                if (previous.x() > 0 && previous.x() < game.columns() - 1
+                        && previous.y() > 0 && previous.y() < game.rows() - 1
+                        && distances[previous.y() * game.columns() + previous.x()] == distance - 1) {
+                    cursor = previous;
+                    found = true;
+                    break;
+                }
+            }
+            QVERIFY(found);
+        }
+        std::reverse(route.begin(), route.end());
+        for (const auto &point : route) {
+            game.movePlayer(point.x() - game.playerX(), point.y() - game.playerY());
+            QCOMPARE(QPoint(game.playerX(), game.playerY()), point);
+            QVERIFY(!game.gameOver());
+        }
+        const auto goldBeforePush = tileCells(game, "gold");
+        const int prizesBeforePush = game.prizesLeft();
+        const int scoreBeforePush = game.score();
+        game.movePlayer(direction, 0);
+        QCOMPARE(QPoint(game.playerX(), game.playerY()), base);
+        QCOMPARE(tileTypeAt(game, base.y(), base.x()), QString("empty"));
+        QCOMPARE(tileTypeAt(game, base.y(), base.x() + direction), QString("crystal"));
+        game.movePlayer(-direction, 0); // освободить клетку под верхней парой
+        for (int tick = 0; tick < 32
+                && tileTypeAt(game, base.y() - 2, base.x()) == "crystal"; ++tick)
+            game.updateCrystals();
+
+        QCOMPARE(tileTypeAt(game, base.y() - 2, base.x()), QString("empty"));
+        QCOMPARE(tileTypeAt(game, base.y() - 1, base.x()), QString("crystal"));
+        QCOMPARE(tileTypeAt(game, base.y(), base.x()), QString("crystal"));
+        QCOMPARE(tileCells(game, "crystal").size(), initialCrystals.size());
+        QCOMPARE(tileCells(game, "gold"), goldBeforePush);
+        QCOMPARE(game.prizesLeft(), prizesBeforePush);
+        QCOMPARE(game.score(), scoreBeforePush);
+        QVERIFY(!game.gameOver());
+        QCOMPARE(game.lives(), 3);
     }
 
     void startAtLevelLoadsAuthoredAndGeneratedMaps_data()
