@@ -159,6 +159,7 @@ public:
     Q_INVOKABLE void updateCrystals();
     Q_INVOKABLE void initializeLevels(const QVariantList &authoredLevels);
     Q_INVOKABLE void restartGame();
+    bool startAtLevel(int level);
     Q_INVOKABLE void dismissKeyRequiredNotice();
     Q_INVOKABLE void dismissKeyCollectedNotice();
     Q_INVOKABLE void dismissSafeOpenedNotice();

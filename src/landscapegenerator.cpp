@@ -3,6 +3,7 @@
 #include <QPoint>
 #include <QQueue>
 #include <QSet>
+#include <functional>
 
 namespace {
 
@@ -130,11 +131,11 @@ QVector<QString> createCandidate(quint32 seed)
     // выбирает узкий вертикальный проход шириной 1–2 клетки. Такие проходы
     // сложнее широких окон, но расположение смещается между платформами, чтобы
     // игроку приходилось искать маршрут по диагонали через несколько рядов.
+    // После размещения Кристаллов добавляются безопасные подходы к ним.
     const int platformRows[] = {2, 4, 6, 8};
     int gapStarts[4] = {};
     int gapWidths[4] = {};
     QVector<QPoint> supportedCells;
-    QVector<QVector<QPoint>> supportedCellsByPlatform(4);
     for (int platformIndex = 0; platformIndex < 4; ++platformIndex) {
         const int platformRow = platformRows[platformIndex];
         const int gapStart = 4 + random.bounded(11); // столбцы 4..14
@@ -154,8 +155,6 @@ QVector<QString> createCandidate(quint32 seed)
                         || col == gapStart + gapWidth;
                 if (col > 2 && col < 17 && !nextToShaft) {
                     supportedCells.append(QPoint(col, platformRow - 1));
-                    supportedCellsByPlatform[platformIndex].append(
-                            QPoint(col, platformRow - 1));
                 }
             }
         }
@@ -191,28 +190,63 @@ QVector<QString> createCandidate(quint32 seed)
         }
     }
 
-    // Плотный рельеф заставляет игрока прокладывать маршрут между препятствиями.
-    // Каждый уровень получает ровно 20 Кристаллов, равномерно по пять над
-    // каждой платформой. Соседние с шахтами клетки не
-    // входят в supportedCells, поэтому у каждой платформы остаются лазейки.
-    // Финальная проверка дополнительно убеждается, что Кристаллы можно толкать,
-    // а все обязательные Призы и выход достижимы.
-    constexpr int targetCrystals = 20;
-    constexpr int crystalsPerPlatform = targetCrystals / 4;
-    int crystalsOnPlatform[4] = {};
-    int crystalsPlaced = 0;
-    for (int attempt = 0; attempt < 480 && crystalsPlaced < targetCrystals; ++attempt) {
-        const int platformIndex = random.bounded(4);
-        if (crystalsOnPlatform[platformIndex] >= crystalsPerPlatform)
-            continue;
+    // Выбираем пять разнесённых Кристаллов на каждой платформе.
+    // Случайное плотное размещение создавало цепочки, которые валидатор
+    // справедливо отклонял: к ним нельзя подойти с пустой стороны.
+    for (int platformRow : platformRows) {
+        const int row = platformRow - 1;
+        QVector<int> eligible;
+        for (int col = 2; col <= 17; ++col) {
+            if (map[platformRow][col] == QLatin1Char('#')
+                    && (map[row][col] == QLatin1Char('.') || map[row][col] == QLatin1Char('#'))
+                    && map[row][col - 1] != QLatin1Char('$')
+                    && map[row][col + 1] != QLatin1Char('$'))
+                eligible.append(col);
+        }
+        QVector<QVector<int>> choices;
+        QVector<int> selected;
+        std::function<void(int)> choose = [&](int index) {
+            if (selected.size() == 5) {
+                choices.append(selected);
+                return;
+            }
+            for (int i = index; i < eligible.size(); ++i) {
+                if (!selected.isEmpty() && eligible[i] - selected.last() < 2)
+                    continue;
+                selected.append(eligible[i]);
+                choose(i + 1);
+                selected.removeLast();
+            }
+        };
+        choose(0);
+        if (choices.isEmpty())
+            return map; // Общий валидатор отклонит неполный набор.
+        const auto columns = choices[random.bounded(choices.size())];
+        for (int col : columns) {
+            map[row][col] = QLatin1Char('C');
+            for (int side : {col - 1, col + 1}) {
+                if (map[row][side] == QLatin1Char('#'))
+                    map[row][side] = QLatin1Char('.');
+            }
+        }
+    }
 
-        const QVector<QPoint> &platformCells = supportedCellsByPlatform[platformIndex];
-        const QPoint cell = platformCells[random.bounded(platformCells.size())];
-        if (map[cell.y()][cell.x()] != QLatin1Char('.'))
-            continue;
-        map[cell.y()][cell.x()] = QLatin1Char('C');
-        ++crystalsOnPlatform[platformIndex];
-        ++crystalsPlaced;
+    // Подход к Кристаллам должен быть доступен и над верхней платформой:
+    // одного общего прохода недостаточно для пяти разделяющих её объектов.
+    // Открываем клетки под пустыми соседями, сохраняя опоры всех предметов.
+    for (int platformRow : platformRows) {
+        const int row = platformRow - 1;
+        for (int col = 2; col <= 17; ++col) {
+            if (map[row][col] != QLatin1Char('C'))
+                continue;
+            for (int side : {col - 1, col + 1}) {
+                if (map[row][side] != QLatin1Char('.'))
+                    continue;
+                map[platformRow][side] = QLatin1Char('.');
+                if (map[platformRow + 1][side] == QLatin1Char('#'))
+                    map[platformRow + 1][side] = QLatin1Char('.');
+            }
+        }
     }
 
     // Суперприз появляется с вероятностью 1/4. Сначала случайно решаем,
@@ -222,7 +256,8 @@ QVector<QString> createCandidate(quint32 seed)
     if (random.bounded(4) == 0) {
         QVector<QPoint> freeSupportedCells;
         for (const QPoint &cell : supportedCells) {
-            if (map[cell.y()][cell.x()] == QLatin1Char('.'))
+            if (map[cell.y()][cell.x()] == QLatin1Char('.')
+                    && map[cell.y() + 1][cell.x()] == QLatin1Char('#'))
                 freeSupportedCells.append(cell);
         }
         if (!freeSupportedCells.isEmpty()) {

@@ -11,6 +11,7 @@
         <file alias="levels/Level3.qml">qml/levels/Level3.qml</file>
         <file alias="levels/Level4.qml">qml/levels/Level4.qml</file>
         <file alias="levels/Level5.qml">qml/levels/Level5.qml</file>
+        <file alias="levels/Level6.qml">qml/levels/Level6.qml</file>
         <file alias="components/tiles/BrickTile.qml">qml/components/tiles/BrickTile.qml</file>
         <file alias="components/tiles/ClassicTheme.qml">qml/components/tiles/ClassicTheme.qml</file>
         <file alias="components/tiles/CrystalTile.qml">qml/components/tiles/CrystalTile.qml</file>

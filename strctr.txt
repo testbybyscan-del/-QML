@@ -2,8 +2,8 @@ Boulder Dash — структура исходников и учебных ма�
 =======================================================
 
 .
-├── CMakeLists.txt                 # Qt 5.15, приложение и три группы CTest
-├── main.cpp                       # Регистрация GameEngine/GameSettings; игра или --tile-gallery
+├── CMakeLists.txt                 # Qt 5.15, приложение и четыре группы CTest
+├── main.cpp                       # Регистрация GameEngine/GameSettings; --level 1–50, игра или --tile-gallery
 ├── qml.qrc                        # Встроенные QML, выбранные PNG и шрифт
 ├── build_and_run.sh               # Настройка CMake, сборка и запуск
 ├── README.md                      # Обзор, управление, сборка, устройство и учебный план
@@ -16,7 +16,8 @@ Boulder Dash — структура исходников и учебных ма�
 │   ├── LEARNING_04.md              # Qt Test и CTest для игровой логики
 │   ├── LEARNING_05.md              # Библиотека тайлов и варианты Персонажа
 │   ├── LEARNING_06.md              # QSettings, меню и пауза
-│   └── LEARNING_07.md              # Разбор ошибок подключения Level6
+│   ├── LEARNING_07.md              # Исторический разбор ошибок подключения Level6
+│   └── LEARNING_08.md              # Исправления Level6, --level 1–50 и генератор
 ├── src/
 │   ├── gameengine.h               # GameEngine, TileModel, EnemyModel и свойство paused
 │   ├── gameengine.cpp             # Игровые правила, физика, уровни и таймеры Кирпичей
@@ -27,7 +28,8 @@ Boulder Dash — структура исходников и учебных ма�
 ├── tests/
 │   ├── test_gameengine.cpp        # Игровые сценарии, пауза и оставшееся время таймеров
 │   ├── test_gamesettings.cpp      # Сохранение, значения, сигналы и сброс настроек
-│   └── test_tilelibrary.cpp       # Тайлы, герои, галерея, меню, настройки и Esc/P
+│   ├── test_tilelibrary.cpp       # Тайлы, герои, галерея, меню, настройки и Esc/P
+│   └── test_startup.cpp           # Процессный запуск уровней и ошибки аргументов
 ├── qml/
 │   ├── main.qml                   # Окно, ввод, HUD, поле, экраны и таймер физики
 │   ├── levels/
@@ -36,7 +38,7 @@ Boulder Dash — структура исходников и учебных ма�
 │   │   ├── Level3.qml
 │   │   ├── Level4.qml             # Ключ
 │   │   ├── Level5.qml             # Пятый подключённый авторский уровень
-│   │   └── Level6.qml             # Файл карты; не подключён в main.qml и qml.qrc
+│   │   └── Level6.qml             # Шестой подключённый авторский уровень
 │   ├── components/
 │   │   ├── Tile.qml               # Loader для семейства тайлов; остальные объекты клетки
 │   │   ├── Player.qml             # Вариант, действие, направление и анимация героя
@@ -80,6 +82,7 @@ Boulder Dash — структура исходников и учебных ма�
     ├── test_gameengine            # Группа CTest gameengine
     ├── test_gamesettings          # Группа CTest gamesettings
     ├── test_tilelibrary           # Группа CTest tilelibrary
+    ├── test_startup               # Группа CTest startup
     ├── env.sh                     # Локальные пути зависимостей на H2
     └── run.sh                     # Запуск приложения с окружением env.sh
 
@@ -98,7 +101,7 @@ Boulder Dash — структура исходников и учебных ма�
   героя независимы от игровых правил. Галерея не создаёт GameEngine.
 * qml.qrc включает нужные QML, PNG и шрифт в приложение. Добавление файла
   на диск само по себе не делает его доступным по URL qrc:/.
-* docs/LEARNING_01.md → docs/LEARNING_07.md — последовательность учебных материалов.
+* docs/LEARNING_01.md → docs/LEARNING_08.md — последовательность учебных материалов.
 
 Локальное окружение H2 (belka), вне отслеживаемых исходников
 -----------------------------------------------------------

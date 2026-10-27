@@ -1,4 +1,5 @@
 #include "../src/gameengine.h"
+#include "../src/landscapegenerator.h"
 
 #include <QCoreApplication>
 #include <QQmlComponent>
@@ -95,6 +96,132 @@ private slots:
         QCoreApplication::setOrganizationName(QStringLiteral("BoulderDashTests"));
         QCoreApplication::setApplicationName(QStringLiteral("GameEngineTests"));
         QStandardPaths::setTestModeEnabled(true);
+    }
+
+    void generatedRouteIsReproducibleAndObjectsHaveSupports()
+    {
+        // 44 карты нужны для старта с уровня 50; seed 45 нужен
+        // при следующем обычном переходе через правый выход.
+        for (quint32 seed = 1; seed <= 45; ++seed) {
+            QString error;
+            const auto rows = LandscapeGenerator::generate(seed, &error);
+            QVERIFY2(!rows.isEmpty(), qPrintable(QString("seed %1: %2").arg(seed).arg(error)));
+            QCOMPARE(rows, LandscapeGenerator::generate(seed));
+            QCOMPARE(rows.size(), 13);
+            int crystals = 0;
+            for (int row = 0; row < rows.size(); ++row) {
+                QCOMPARE(rows[row].size(), 20);
+                for (int col = 0; col < rows[row].size(); ++col) {
+                    const QChar tile = rows[row][col];
+                    if (tile == 'C')
+                        ++crystals;
+                    if (tile == 'C' || tile == '$' || tile == 'S') {
+                        QVERIFY(row + 1 < rows.size());
+                        QCOMPARE(rows[row + 1][col], QChar('#'));
+                    }
+                }
+            }
+            QCOMPARE(crystals, 20);
+        }
+    }
+
+    void startAtLevelLoadsAuthoredAndGeneratedMaps_data()
+    {
+        QTest::addColumn<int>("level");
+        for (int level : {1, 6, 7, 50})
+            QTest::newRow(qPrintable(QString::number(level))) << level;
+    }
+
+    void startAtLevelLoadsAuthoredAndGeneratedMaps()
+    {
+        QFETCH(int, level);
+        QQmlEngine qmlEngine;
+        QVariantList authoredLevels;
+        QStringList expected;
+        for (int number = 1; number <= 6; ++number) {
+            const auto rows = loadQmlLevel(qmlEngine,
+                    QStringLiteral("qrc:/levels/Level%1.qml").arg(number));
+            QVERIFY(!rows.isEmpty());
+            authoredLevels.append(QVariant::fromValue(asVariantRows(rows)));
+            if (number == level)
+                expected = rows;
+        }
+        if (level > 6) {
+            const auto generated = LandscapeGenerator::generate(level - 6);
+            QVERIFY(!generated.isEmpty());
+            for (const auto &row : generated)
+                expected.append(row);
+        }
+
+        GameEngine game;
+        game.initializeLevels(authoredLevels);
+        game.setPaused(true); // запуск должен работать и из меню
+        QSignalSpy changed(&game, &GameEngine::levelChanged);
+        QVERIFY(game.startAtLevel(level));
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(game.currentLevel(), level);
+        QCOMPARE(game.authoredLevelCount(), 6);
+        QVERIFY(game.paused());
+        QCOMPARE(game.rows(), expected.size());
+        QCOMPARE(game.columns(), expected.first().size());
+        QCOMPARE(game.prizesLeft(), countPrizes(expected));
+        for (int row = 0; row < expected.size(); ++row) {
+            for (int col = 0; col < expected[row].size(); ++col) {
+                const QChar tile = expected[row][col];
+                if (tile == 'P') {
+                    QCOMPARE(game.playerX(), col);
+                    QCOMPARE(game.playerY(), row);
+                } else if (tile == 'C') {
+                    QCOMPARE(tileTypeAt(game, row, col), QString("crystal"));
+                } else if (tile == '$') {
+                    QCOMPARE(tileTypeAt(game, row, col), QString("gold"));
+                } else if (tile == 'X') {
+                    QCOMPARE(tileTypeAt(game, row, col), QString("exit"));
+                }
+            }
+        }
+        if (level == 50) {
+            game.setPaused(false);
+            game.movePlayer(-1, 0);
+            game.movePlayer(-1, 0);
+            QCOMPARE(game.currentLevel(), 49);
+            const auto previous = LandscapeGenerator::generate(43);
+            QCOMPARE(game.prizesLeft(), countPrizes(QStringList(previous.begin(), previous.end())));
+        }
+        game.restartGame();
+        QCOMPARE(game.currentLevel(), 1);
+        QCOMPARE(game.authoredLevelCount(), 6);
+        QCOMPARE(game.score(), 0);
+        QCOMPARE(game.lives(), 3);
+    }
+
+    void startAtLevelRejectsInvalidRequestsWithoutChangingSession()
+    {
+        GameEngine uninitialized;
+        QVERIFY(!uninitialized.startAtLevel(1));
+        QCOMPARE(uninitialized.rows(), 0);
+        auto rows = emptyLevel();
+        setCell(rows, 3, 3, '$');
+        GameEngine game;
+        initialize(game, rows);
+        game.movePlayer(1, 0);
+        QVERIFY(game.score() > 0);
+        const int score = game.score();
+        QSignalSpy changed(&game, &GameEngine::levelChanged);
+        for (int invalid : {-1, 0, 51, 1000}) {
+            QVERIFY(!game.startAtLevel(invalid));
+            QCOMPARE(game.currentLevel(), 1);
+            QCOMPARE(game.score(), score);
+            QCOMPARE(game.playerX(), 3);
+            QCOMPARE(game.prizesLeft(), 0);
+        }
+        QCOMPARE(changed.count(), 0);
+        game.setPaused(true);
+        QVERIFY(game.startAtLevel(1));
+        QCOMPARE(game.score(), 0);
+        QCOMPARE(game.prizesLeft(), 1);
+        QCOMPARE(game.playerX(), 2);
+        QVERIFY(game.paused());
     }
 
     void pauseBlocksInputPhysicsAndPreservesPitTime()

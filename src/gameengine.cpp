@@ -120,14 +120,35 @@ void GameEngine::initializeLevels(const QVariantList &authoredLevels)
 
 void GameEngine::restartGame()
 {
-    if (m_authoredLevelCount <= 0 || m_levels.isEmpty())
-        return;
+    startAtLevel(1);
+}
 
-    m_levels.resize(m_authoredLevelCount);
+bool GameEngine::startAtLevel(int level)
+{
+    if (level < 1 || level > 50 || m_authoredLevelCount <= 0 || m_levels.isEmpty())
+        return false;
+
+    // Сначала готовим весь маршрут, чтобы отказ генерации не затронул
+    // текущую сессию. Авторские карты всегда имеют приоритет.
+    auto levels = m_levels;
+    levels.resize(m_authoredLevelCount);
+    int seed = 0;
+    while (levels.size() < level) {
+        QString error;
+        const auto generated = LandscapeGenerator::generate(
+                static_cast<quint32>(++seed), &error);
+        if (generated.isEmpty()) {
+            qWarning() << "Landscape generation failed:" << error;
+            return false;
+        }
+        levels.append(generated);
+    }
+
+    m_levels = levels;
     m_levelSnapshots.clear();
-    m_levelSnapshots.resize(m_authoredLevelCount);
-    m_currentLevel = 1;
-    m_landscapeSeed = 0;
+    m_levelSnapshots.resize(m_levels.size());
+    m_currentLevel = level;
+    m_landscapeSeed = seed;
     m_score = 0;
     m_prizesLeft = 0;
     m_lives = 3;
@@ -148,6 +169,7 @@ void GameEngine::restartGame()
     m_fallingCrystalCells.clear();
     m_pitPrizeDugCellByPosition.clear();
     loadLevel();
+    return true;
 }
 
 void GameEngine::dismissKeyRequiredNotice()

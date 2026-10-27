@@ -57,6 +57,7 @@ Window {
     Levels.Level3 { id: level3 }
     Levels.Level4 { id: level4 }
     Levels.Level5 { id: level5 }
+    Levels.Level6 { id: level6 }
 
     Loader {
         id: galleryLoader
@@ -570,7 +571,7 @@ Window {
 
         Component.onCompleted: {
             gameEngine.initializeLevels([
-                level1.rows, level2.rows, level3.rows, level4.rows, level5.rows
+                level1.rows, level2.rows, level3.rows, level4.rows, level5.rows, level6.rows
             ])
             forceActiveFocus()
         }

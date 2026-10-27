@@ -72,6 +72,12 @@ if(BUILD_TESTING)
         Qt5::Core Qt5::Gui Qt5::Quick Qt5::Qml Qt5::Test
     )
     add_test(NAME tilelibrary COMMAND test_tilelibrary)
+    add_executable(test_startup tests/test_startup.cpp)
+    target_link_libraries(test_startup PRIVATE Qt5::Core Qt5::Test)
+    add_dependencies(test_startup boulderdash)
+    add_test(NAME startup COMMAND test_startup)
     set_tests_properties(tilelibrary PROPERTIES ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
+    set_tests_properties(startup PROPERTIES ENVIRONMENT
         "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
 endif()
