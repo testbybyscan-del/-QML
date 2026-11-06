@@ -58,15 +58,13 @@ Window {
     Levels.Level4 { id: level4 }
     Levels.Level5 { id: level5 }
     Levels.Level6 { id: level6 }
-<<<<<<< HEAD
 
     Loader {
         id: galleryLoader
         active: false
         source: "examples/TileGallery.qml"
     }
-=======
->>>>>>> 8216fb8 (123)
+
 
     GameEngine {
         id: gameEngine
